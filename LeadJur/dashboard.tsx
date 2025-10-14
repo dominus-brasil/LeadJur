@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, Filter, Download, Eye, MapPin, Calendar, Phone, Mail, Building, User, LogOut, BarChart3, Target, Users, TrendingUp, Home, FileText, Settings, CreditCard, Scale, X, Plus, Trash2 } from 'lucide-react';
+import { Search, Filter, Download, Eye, MapPin, Calendar, Phone, Mail, Building, User, LogOut, BarChart3, Target, Users, TrendingUp, Home, FileText, Settings, CreditCard, Scale, X, Plus, Trash2, HelpCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
 interface DashboardProps {
@@ -22,6 +22,17 @@ interface Lawyer {
   status: 'active' | 'inactive';
 }
 
+interface Lead {
+  id: string;
+  name: string;
+  company: string;
+  specialty: string;
+  city: string;
+  state: string;
+  oab: string;
+  stage: 'no-contact' | 'contact-attempt' | 'contact-made' | 'meeting-scheduled' | 'negotiating' | 'closed' | 'future-negotiations' | 'lost' | 'cancelled';
+}
+
 type TabType = 'dashboard' | 'search' | 'history' | 'settings';
 
 export default function Dashboard({ onLogout }: DashboardProps) {
@@ -37,6 +48,165 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [revealedContacts, setRevealedContacts] = useState<Set<string>>(new Set());
   const [addedLeads, setAddedLeads] = useState<Set<string>>(new Set());
   const [selectedLead, setSelectedLead] = useState<{ name: string; company: string; specialty: string; city: string; state: string; oab: string } | null>(null);
+  
+  // Estados para drag and drop
+  const [draggedLead, setDraggedLead] = useState<string | null>(null);
+  
+  // Estados para o tour
+  const [showTour, setShowTour] = useState(false);
+  const [tourStep, setTourStep] = useState(0);
+  const [leads, setLeads] = useState<Lead[]>([
+    {
+      id: '1',
+      name: 'João Silva',
+      company: 'Silva & Associados',
+      specialty: 'Direito Tributário',
+      city: 'São Paulo',
+      state: 'SP',
+      oab: 'OAB/SP 234.567',
+      stage: 'no-contact'
+    },
+    {
+      id: '2',
+      name: 'Maria Santos',
+      company: 'Santos Advocacia',
+      specialty: 'Direito Civil',
+      city: 'Rio de Janeiro',
+      state: 'RJ',
+      oab: 'OAB/RJ 345.678',
+      stage: 'no-contact'
+    },
+    {
+      id: '3',
+      name: 'Pedro Costa',
+      company: 'Costa Advogados',
+      specialty: 'Direito Penal',
+      city: 'Belo Horizonte',
+      state: 'MG',
+      oab: 'OAB/MG 456.789',
+      stage: 'no-contact'
+    },
+    {
+      id: '4',
+      name: 'Ana Rodrigues',
+      company: 'Rodrigues Empresarial',
+      specialty: 'Direito Empresarial',
+      city: 'Campinas',
+      state: 'SP',
+      oab: 'OAB/SP 567.890',
+      stage: 'contact-attempt'
+    },
+    {
+      id: '5',
+      name: 'Carlos Mendes',
+      company: 'Mendes Trabalhista',
+      specialty: 'Direito Trabalhista',
+      city: 'Curitiba',
+      state: 'PR',
+      oab: 'OAB/PR 678.901',
+      stage: 'contact-attempt'
+    },
+    {
+      id: '6',
+      name: 'Fernanda Lima',
+      company: 'Lima Ambiental',
+      specialty: 'Direito Ambiental',
+      city: 'Porto Alegre',
+      state: 'RS',
+      oab: 'OAB/RS 789.012',
+      stage: 'contact-made'
+    },
+    {
+      id: '7',
+      name: 'Roberto Alves',
+      company: 'Alves Imóveis',
+      specialty: 'Direito Imobiliário',
+      city: 'Florianópolis',
+      state: 'SC',
+      oab: 'OAB/SC 890.123',
+      stage: 'contact-made'
+    },
+    {
+      id: '8',
+      name: 'Juliana Ferreira',
+      company: 'Ferreira Previdência',
+      specialty: 'Direito Previdenciário',
+      city: 'Salvador',
+      state: 'BA',
+      oab: 'OAB/BA 901.234',
+      stage: 'meeting-scheduled'
+    },
+    {
+      id: '9',
+      name: 'Ricardo Souza',
+      company: 'Souza Digital Law',
+      specialty: 'Direito Digital',
+      city: 'Brasília',
+      state: 'DF',
+      oab: 'OAB/DF 012.345',
+      stage: 'meeting-scheduled'
+    },
+    {
+      id: '10',
+      name: 'Patrícia Oliveira',
+      company: 'Oliveira Societário',
+      specialty: 'Direito Societário',
+      city: 'Goiânia',
+      state: 'GO',
+      oab: 'OAB/GO 123.456',
+      stage: 'negotiating'
+    },
+    {
+      id: '11',
+      name: 'Leonardo Martins',
+      company: 'Martins Contratos',
+      specialty: 'Direito Contratual',
+      city: 'Vitória',
+      state: 'ES',
+      oab: 'OAB/ES 234.567',
+      stage: 'closed'
+    },
+    {
+      id: '12',
+      name: 'Camila Rocha',
+      company: 'Rocha & Consumidor',
+      specialty: 'Direito do Consumidor',
+      city: 'Fortaleza',
+      state: 'CE',
+      oab: 'OAB/CE 345.678',
+      stage: 'closed'
+    },
+    {
+      id: '13',
+      name: 'Gabriel Santos',
+      company: 'Santos International Law',
+      specialty: 'Direito Internacional',
+      city: 'Recife',
+      state: 'PE',
+      oab: 'OAB/PE 456.789',
+      stage: 'future-negotiations'
+    },
+    {
+      id: '14',
+      name: 'Bruno Oliveira',
+      company: 'Oliveira Eleitoral',
+      specialty: 'Direito Eleitoral',
+      city: 'São Luís',
+      state: 'MA',
+      oab: 'OAB/MA 567.890',
+      stage: 'lost'
+    },
+    {
+      id: '15',
+      name: 'Alessandra Costa',
+      company: 'Costa Administrativo',
+      specialty: 'Direito Administrativo',
+      city: 'Manaus',
+      state: 'AM',
+      oab: 'OAB/AM 678.901',
+      stage: 'cancelled'
+    }
+  ]);
 
   // Bloquear scroll da página quando modal estiver aberto
   useEffect(() => {
@@ -51,6 +221,186 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       document.body.style.overflow = 'unset';
     };
   }, [selectedLead]);
+
+  // Funções de drag and drop
+  const handleDragStart = (e: React.DragEvent, leadId: string) => {
+    setDraggedLead(leadId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStage: Lead['stage']) => {
+    e.preventDefault();
+    
+    if (draggedLead) {
+      setLeads(prevLeads => 
+        prevLeads.map(lead => 
+          lead.id === draggedLead 
+            ? { ...lead, stage: targetStage }
+            : lead
+        )
+      );
+      setDraggedLead(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDraggedLead(null);
+  };
+
+  // Função para filtrar leads por estágio
+  const getLeadsByStage = (stage: Lead['stage']) => {
+    return leads.filter(lead => lead.stage === stage);
+  };
+
+  // Funções do tour
+  const tourSteps = [
+    {
+      title: "Bem-vindo ao LeadJur! 👋",
+      description: "Vou te mostrar as principais funcionalidades da plataforma. A qualquer momento você pode clicar no botão de ajuda (?) para rever este tour.",
+      target: "help-button",
+      position: "bottom"
+    },
+    {
+      title: "Painel Executivo",
+      description: "Aqui você acompanha as principais métricas do seu negócio em tempo real.",
+      target: "stats-section",
+      position: "bottom"
+    },
+    {
+      title: "Funil de Vendas",
+      description: "Esta é a alma do sistema! Você pode arrastar e soltar os cards dos leads entre as colunas para acompanhar o progresso de cada negociação. 🚀 É só clicar, segurar e arrastar!",
+      target: "funnel-section",
+      position: "top"
+    },
+    {
+      title: "Cards dos Leads",
+      description: "Cada card representa um lead. Você pode arrastá-los entre as colunas conforme o status da negociação muda. Clique em um card para ver mais detalhes! 🖱️ Experimente arrastar este card agora!",
+      target: "lead-card",
+      position: "right"
+    },
+    {
+      title: "Colunas do Funil",
+      description: "Cada coluna representa uma fase da negociação. Arraste os cards entre elas para atualizar o status dos seus leads. É simples e intuitivo! 📊",
+      target: "funnel-column",
+      position: "left"
+    },
+    {
+      title: "Aba Consultar",
+      description: "Use esta aba para buscar novos advogados na nossa base de dados e adicionar como leads.",
+      target: "search-tab",
+      position: "bottom"
+    },
+    {
+      title: "Aba Histórico",
+      description: "Aqui você pode acompanhar todo o histórico das suas consultas realizadas.",
+      target: "history-tab",
+      position: "bottom"
+    },
+    {
+      title: "Configurações",
+      description: "Personalize sua experiência e gerencie sua conta nesta seção.",
+      target: "settings-tab",
+      position: "bottom"
+    },
+    {
+      title: "🎉 Parabéns! Tour Completo!",
+      description: "Agora você conhece todas as funcionalidades principais do LeadJur! Comece a usar o sistema para gerenciar seus leads de forma eficiente. Lembre-se: você pode arrastar os cards entre as colunas a qualquer momento!",
+      target: null,
+      position: "center"
+    },
+    {
+      title: "Parabéns! 🎉",
+      description: "Agora você conhece todas as funcionalidades principais do LeadJur! Comece a organizar seus leads arrastando os cards e acompanhe o crescimento do seu negócio. Qualquer dúvida, clique no botão ? novamente para refazer o tour.",
+      target: null,
+      position: "center"
+    }
+  ];
+
+  const startTour = () => {
+    setActiveTab('dashboard'); // Garantir que estamos na aba do dashboard
+    setShowTour(true);
+    setTourStep(0);
+  };
+
+  const nextTourStep = () => {
+    if (tourStep < tourSteps.length - 1) {
+      const nextStep = tourStep + 1;
+      
+      // Mudar para aba apropriada para cada step
+      if (tourSteps[nextStep].target === 'search-tab' || 
+          tourSteps[nextStep].target === 'history-tab' || 
+          tourSteps[nextStep].target === 'settings-tab') {
+        // Para steps das abas, manter na dashboard para mostrar as abas
+        setActiveTab('dashboard');
+      }
+      
+      setTourStep(nextStep);
+    } else {
+      setShowTour(false);
+      setTourStep(0);
+    }
+  };
+
+  const prevTourStep = () => {
+    if (tourStep > 0) {
+      setTourStep(tourStep - 1);
+    }
+  };
+
+  const closeTour = () => {
+    setShowTour(false);
+    setTourStep(0);
+  };
+
+  // Efeito para destacar elementos durante o tour
+  useEffect(() => {
+    if (showTour && tourSteps[tourStep]?.target) {
+      const element = document.getElementById(tourSteps[tourStep].target!);
+      if (element) {
+        element.classList.add('tour-highlight');
+        
+        // Para as abas, adicionar destaque especial mesmo quando ativa
+        if (['search-tab', 'history-tab', 'settings-tab'].includes(tourSteps[tourStep].target!)) {
+          element.classList.add('tour-tab-highlight');
+        }
+        
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        
+        return () => {
+          element.classList.remove('tour-highlight');
+          element.classList.remove('tour-tab-highlight');
+        };
+      }
+    }
+  }, [showTour, tourStep]);
+
+  // Função para calcular a posição do modal
+  const getModalPosition = () => {
+    const currentStep = tourSteps[tourStep];
+    if (!currentStep?.target) return 'center';
+    
+    const element = document.getElementById(currentStep.target);
+    if (!element) return 'center';
+    
+    const rect = element.getBoundingClientRect();
+    const windowHeight = window.innerHeight;
+    
+    // Se elemento está na parte superior (primeiro terço), modal vai para baixo
+    if (rect.bottom < windowHeight / 3) {
+      return 'bottom';
+    }
+    // Se elemento está na parte inferior (último terço), modal vai para cima
+    if (rect.top > (windowHeight * 2) / 3) {
+      return 'top';
+    }
+    // Caso contrário, no lado direito
+    return 'right';
+  };
 
   const specialties = [
     'Direito Civil', 'Direito Penal', 'Direito Trabalhista', 'Direito Empresarial',
@@ -173,10 +523,18 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Scale className="w-8 h-8 text-law-gold-500" />
-              <span className="text-2xl font-bold text-law-gold-500">LeadJur</span>
+              <span className="text-2xl font-serif font-bold text-law-gold-500">LeadJur</span>
             </div>
             
             <div className="flex items-center gap-4">
+              <button
+                onClick={startTour}
+                id="help-button"
+                className="flex items-center justify-center w-10 h-10 bg-law-gold-600/20 hover:bg-law-gold-600/30 border border-law-gold-600/30 hover:border-law-gold-600/50 rounded-full transition-all group"
+                title="Tour pela plataforma"
+              >
+                <HelpCircle className="w-5 h-5 text-law-gold-400 group-hover:text-law-gold-300" />
+              </button>
               <div className="text-sm text-slate-300">
                 <span className="font-semibold text-slate-100">João Silva</span>
               </div>
@@ -206,6 +564,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             
             <button
               onClick={() => setActiveTab('search')}
+              id="search-tab"
               className={`flex items-center gap-2 px-4 py-2 rounded font-semibold transition-all ${
                 activeTab === 'search'
                   ? 'bg-law-gold-600 text-law-navy-950'
@@ -218,6 +577,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             
             <button
               onClick={() => setActiveTab('history')}
+              id="history-tab"
               className={`flex items-center gap-2 px-4 py-2 rounded font-semibold transition-all ${
                 activeTab === 'history'
                   ? 'bg-law-gold-600 text-law-navy-950'
@@ -230,6 +590,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             
             <button
               onClick={() => setActiveTab('settings')}
+              id="settings-tab"
               className={`flex items-center gap-2 px-4 py-2 rounded font-semibold transition-all ${
                 activeTab === 'settings'
                   ? 'bg-law-gold-600 text-law-navy-950'
@@ -243,11 +604,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-6 py-8 relative">
+      <div className="max-w-7xl mx-auto px-6 py-8 pb-2 relative">
         {/* Dashboard Tab */}
         {activeTab === 'dashboard' && (
           <>
-            <div className="mb-8">
+            <div className="mb-16" id="stats-section">
               <h1 className="text-3xl font-bold mb-6 text-slate-50">Painel Executivo</h1>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {stats.map((stat, index) => {
@@ -273,237 +634,314 @@ export default function Dashboard({ onLogout }: DashboardProps) {
         </div>
 
             {/* Sales Funnel */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold mb-6 text-slate-50">Funil de Vendas</h2>
+            <div className="mb-2" id="funnel-section">
+              <h2 className="text-2xl font-bold mb-6 mt-8 text-slate-50">Funil de Vendas</h2>
               <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 {/* Sem Contato */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  id="funnel-column"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'no-contact')}
+                >
                   <div className="bg-slate-500/20 backdrop-blur-sm border border-slate-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-slate-300 text-sm text-center">Sem Contato (3)</h3>
+                    <h3 className="font-bold text-slate-300 text-sm text-center">Sem Contato ({getLeadsByStage('no-contact').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'João Silva', company: 'Silva & Associados', specialty: 'Direito Tributário', city: 'São Paulo', state: 'SP', oab: 'OAB/SP 234.567' })}
-                      className="bg-law-navy-900/50 border border-slate-500/20 rounded p-3 law-shadow cursor-pointer hover:border-slate-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-slate-400">João Silva</div>
-                      <div className="text-xs text-slate-400">Silva & Associados</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Tributário</div>
-                      <div className="text-xs text-slate-400">São Paulo, SP</div>
-                      <div className="text-xs text-slate-400">OAB/SP 234.567</div>
-                    </div>
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Maria Santos', company: 'Santos Advocacia', specialty: 'Direito Civil', city: 'Rio de Janeiro', state: 'RJ', oab: 'OAB/RJ 345.678' })}
-                      className="bg-law-navy-900/50 border border-slate-500/20 rounded p-3 law-shadow cursor-pointer hover:border-slate-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-slate-400">Maria Santos</div>
-                      <div className="text-xs text-slate-400">Santos Advocacia</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Civil</div>
-                      <div className="text-xs text-slate-400">Rio de Janeiro, RJ</div>
-                      <div className="text-xs text-slate-400">OAB/RJ 345.678</div>
-                    </div>
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Pedro Costa', company: 'Costa Advogados', specialty: 'Direito Penal', city: 'Belo Horizonte', state: 'MG', oab: 'OAB/MG 456.789' })}
-                      className="bg-law-navy-900/50 border border-slate-500/20 rounded p-3 law-shadow cursor-pointer hover:border-slate-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-slate-400">Pedro Costa</div>
-                      <div className="text-xs text-slate-400">Costa Advogados</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Penal</div>
-                      <div className="text-xs text-slate-400">Belo Horizonte, MG</div>
-                      <div className="text-xs text-slate-400">OAB/MG 456.789</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
+                    {getLeadsByStage('no-contact').map((lead, index) => (
+                      <div 
+                        key={lead.id}
+                        id={index === 0 ? "lead-card" : undefined}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-slate-500/20 rounded p-3 law-shadow cursor-move hover:border-slate-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-slate-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('no-contact').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Tentativa de Contato */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'contact-attempt')}
+                >
                   <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-blue-300 text-sm text-center">Tentativa de Contato (2)</h3>
+                    <h3 className="font-bold text-blue-300 text-sm text-center">Tentativa de Contato ({getLeadsByStage('contact-attempt').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Ana Rodrigues', company: 'Rodrigues Empresarial', specialty: 'Direito Empresarial', city: 'Campinas', state: 'SP', oab: 'OAB/SP 567.890' })}
-                      className="bg-law-navy-900/50 border border-blue-500/20 rounded p-3 law-shadow cursor-pointer hover:border-blue-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-blue-400">Ana Rodrigues</div>
-                      <div className="text-xs text-slate-400">Rodrigues Empresarial</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Empresarial</div>
-                      <div className="text-xs text-slate-400">Campinas, SP</div>
-                      <div className="text-xs text-slate-400">OAB/SP 567.890</div>
-                    </div>
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Carlos Mendes', company: 'Mendes Trabalhista', specialty: 'Direito Trabalhista', city: 'Curitiba', state: 'PR', oab: 'OAB/PR 678.901' })}
-                      className="bg-law-navy-900/50 border border-blue-500/20 rounded p-3 law-shadow cursor-pointer hover:border-blue-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-blue-400">Carlos Mendes</div>
-                      <div className="text-xs text-slate-400">Mendes Trabalhista</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Trabalhista</div>
-                      <div className="text-xs text-slate-400">Curitiba, PR</div>
-                      <div className="text-xs text-slate-400">OAB/PR 678.901</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('contact-attempt').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-blue-500/20 rounded p-3 law-shadow cursor-move hover:border-blue-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-blue-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('contact-attempt').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Contato Feito */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'contact-made')}
+                >
                   <div className="bg-cyan-500/20 backdrop-blur-sm border border-cyan-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-cyan-300 text-sm text-center">Contato Feito (2)</h3>
+                    <h3 className="font-bold text-cyan-300 text-sm text-center">Contato Feito ({getLeadsByStage('contact-made').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Fernanda Lima', company: 'Lima Ambiental', specialty: 'Direito Ambiental', city: 'Porto Alegre', state: 'RS', oab: 'OAB/RS 789.012' })}
-                      className="bg-law-navy-900/50 border border-cyan-500/20 rounded p-3 law-shadow cursor-pointer hover:border-cyan-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-cyan-400">Fernanda Lima</div>
-                      <div className="text-xs text-slate-400">Lima Ambiental</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Ambiental</div>
-                      <div className="text-xs text-slate-400">Porto Alegre, RS</div>
-                      <div className="text-xs text-slate-400">OAB/RS 789.012</div>
-                    </div>
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Roberto Alves', company: 'Alves Imóveis', specialty: 'Direito Imobiliário', city: 'Florianópolis', state: 'SC', oab: 'OAB/SC 890.123' })}
-                      className="bg-law-navy-900/50 border border-cyan-500/20 rounded p-3 law-shadow cursor-pointer hover:border-cyan-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-cyan-400">Roberto Alves</div>
-                      <div className="text-xs text-slate-400">Alves Imóveis</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Imobiliário</div>
-                      <div className="text-xs text-slate-400">Florianópolis, SC</div>
-                      <div className="text-xs text-slate-400">OAB/SC 890.123</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('contact-made').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-cyan-500/20 rounded p-3 law-shadow cursor-move hover:border-cyan-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-cyan-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('contact-made').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Reunião Agendada */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'meeting-scheduled')}
+                >
                   <div className="bg-law-gold-500/20 backdrop-blur-sm border border-law-gold-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-law-gold-300 text-sm text-center">Reunião Agendada (2)</h3>
+                    <h3 className="font-bold text-law-gold-300 text-sm text-center">Reunião Agendada ({getLeadsByStage('meeting-scheduled').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Juliana Ferreira', company: 'Ferreira Previdência', specialty: 'Direito Previdenciário', city: 'Salvador', state: 'BA', oab: 'OAB/BA 901.234' })}
-                      className="bg-law-navy-900/50 border border-law-gold-500/20 rounded p-3 law-shadow cursor-pointer hover:border-law-gold-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-law-gold-400">Juliana Ferreira</div>
-                      <div className="text-xs text-slate-400">Ferreira Previdência</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Previdenciário</div>
-                      <div className="text-xs text-slate-400">Salvador, BA</div>
-                      <div className="text-xs text-slate-400">OAB/BA 901.234</div>
-                    </div>
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Ricardo Souza', company: 'Souza Digital Law', specialty: 'Direito Digital', city: 'Brasília', state: 'DF', oab: 'OAB/DF 012.345' })}
-                      className="bg-law-navy-900/50 border border-law-gold-500/20 rounded p-3 law-shadow cursor-pointer hover:border-law-gold-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-law-gold-400">Ricardo Souza</div>
-                      <div className="text-xs text-slate-400">Souza Digital Law</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Digital</div>
-                      <div className="text-xs text-slate-400">Brasília, DF</div>
-                      <div className="text-xs text-slate-400">OAB/DF 012.345</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('meeting-scheduled').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-law-gold-500/20 rounded p-3 law-shadow cursor-move hover:border-law-gold-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-law-gold-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('meeting-scheduled').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Em Negociação */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'negotiating')}
+                >
                   <div className="bg-purple-500/20 backdrop-blur-sm border border-purple-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-purple-300 text-sm text-center">Em Negociação (1)</h3>
+                    <h3 className="font-bold text-purple-300 text-sm text-center">Em Negociação ({getLeadsByStage('negotiating').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Patrícia Oliveira', company: 'Oliveira Societário', specialty: 'Direito Societário', city: 'Goiânia', state: 'GO', oab: 'OAB/GO 123.456' })}
-                      className="bg-law-navy-900/50 border border-purple-500/20 rounded p-3 law-shadow cursor-pointer hover:border-purple-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-purple-400">Patrícia Oliveira</div>
-                      <div className="text-xs text-slate-400">Oliveira Societário</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Societário</div>
-                      <div className="text-xs text-slate-400">Goiânia, GO</div>
-                      <div className="text-xs text-slate-400">OAB/GO 123.456</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('negotiating').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-purple-500/20 rounded p-3 law-shadow cursor-move hover:border-purple-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-purple-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('negotiating').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Fechado */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'closed')}
+                >
                   <div className="bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-emerald-300 text-sm text-center">Fechado (2)</h3>
+                    <h3 className="font-bold text-emerald-300 text-sm text-center">Fechado ({getLeadsByStage('closed').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Leonardo Martins', company: 'Martins Contratos', specialty: 'Direito Contratual', city: 'Vitória', state: 'ES', oab: 'OAB/ES 234.567' })}
-                      className="bg-law-navy-900/50 border border-emerald-500/20 rounded p-3 law-shadow cursor-pointer hover:border-emerald-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-emerald-400">Leonardo Martins</div>
-                      <div className="text-xs text-slate-400">Martins Contratos</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Contratual</div>
-                      <div className="text-xs text-slate-400">Vitória, ES</div>
-                      <div className="text-xs text-slate-400">OAB/ES 234.567</div>
-                    </div>
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Camila Rocha', company: 'Rocha & Consumidor', specialty: 'Direito do Consumidor', city: 'Fortaleza', state: 'CE', oab: 'OAB/CE 345.678' })}
-                      className="bg-law-navy-900/50 border border-emerald-500/20 rounded p-3 law-shadow cursor-pointer hover:border-emerald-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-emerald-400">Camila Rocha</div>
-                      <div className="text-xs text-slate-400">Rocha & Consumidor</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito do Consumidor</div>
-                      <div className="text-xs text-slate-400">Fortaleza, CE</div>
-                      <div className="text-xs text-slate-400">OAB/CE 345.678</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('closed').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-emerald-500/20 rounded p-3 law-shadow cursor-move hover:border-emerald-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-emerald-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('closed').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Negociações Futuras */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'future-negotiations')}
+                >
                   <div className="bg-indigo-500/20 backdrop-blur-sm border border-indigo-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-indigo-300 text-sm text-center">Negociações Futuras (1)</h3>
+                    <h3 className="font-bold text-indigo-300 text-sm text-center">Negociações Futuras ({getLeadsByStage('future-negotiations').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Gabriel Santos', company: 'Santos International Law', specialty: 'Direito Internacional', city: 'Recife', state: 'PE', oab: 'OAB/PE 456.789' })}
-                      className="bg-law-navy-900/50 border border-indigo-500/20 rounded p-3 law-shadow cursor-pointer hover:border-indigo-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-indigo-400">Gabriel Santos</div>
-                      <div className="text-xs text-slate-400">Santos International Law</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Internacional</div>
-                      <div className="text-xs text-slate-400">Recife, PE</div>
-                      <div className="text-xs text-slate-400">OAB/PE 456.789</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('future-negotiations').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-indigo-500/20 rounded p-3 law-shadow cursor-move hover:border-indigo-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-indigo-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('future-negotiations').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Perdidos */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'lost')}
+                >
                   <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-red-300 text-sm text-center">Perdidos (1)</h3>
+                    <h3 className="font-bold text-red-300 text-sm text-center">Perdidos ({getLeadsByStage('lost').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Bruno Oliveira', company: 'Oliveira Eleitoral', specialty: 'Direito Eleitoral', city: 'São Luís', state: 'MA', oab: 'OAB/MA 567.890' })}
-                      className="bg-law-navy-900/50 border border-red-500/20 rounded p-3 law-shadow cursor-pointer hover:border-red-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-red-400">Bruno Oliveira</div>
-                      <div className="text-xs text-slate-400">Oliveira Eleitoral</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Eleitoral</div>
-                      <div className="text-xs text-slate-400">São Luís, MA</div>
-                      <div className="text-xs text-slate-400">OAB/MA 567.890</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('lost').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-red-500/20 rounded p-3 law-shadow cursor-move hover:border-red-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-red-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('lost').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
 
                 {/* Cancelados */}
-                <div className="flex-shrink-0 w-64">
+                <div 
+                  className="flex-shrink-0 w-64"
+                  onDragOver={handleDragOver}
+                  onDrop={(e) => handleDrop(e, 'cancelled')}
+                >
                   <div className="bg-orange-500/20 backdrop-blur-sm border border-orange-500/30 rounded-lg p-3 mb-3">
-                    <h3 className="font-bold text-orange-300 text-sm text-center">Cancelados (1)</h3>
+                    <h3 className="font-bold text-orange-300 text-sm text-center">Cancelados ({getLeadsByStage('cancelled').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar">
-                    <div 
-                      onClick={() => setSelectedLead({ name: 'Alessandra Costa', company: 'Costa Administrativo', specialty: 'Direito Administrativo', city: 'Manaus', state: 'AM', oab: 'OAB/AM 678.901' })}
-                      className="bg-law-navy-900/50 border border-orange-500/20 rounded p-3 law-shadow cursor-pointer hover:border-orange-500/40 transition-colors"
-                    >
-                      <div className="font-semibold text-sm text-orange-400">Alessandra Costa</div>
-                      <div className="text-xs text-slate-400">Costa Administrativo</div>
-                      <div className="text-xs text-slate-400 mt-3">Direito Administrativo</div>
-                      <div className="text-xs text-slate-400">Manaus, AM</div>
-                      <div className="text-xs text-slate-400">OAB/AM 678.901</div>
-                    </div>
+                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                    {getLeadsByStage('cancelled').map((lead) => (
+                      <div 
+                        key={lead.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, lead.id)}
+                        onDragEnd={handleDragEnd}
+                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        className={`bg-law-navy-900/50 border border-orange-500/20 rounded p-3 law-shadow cursor-move hover:border-orange-500/40 transition-all ${
+                          draggedLead === lead.id ? 'opacity-50 scale-95' : ''
+                        }`}
+                      >
+                        <div className="font-semibold text-sm text-orange-400">{lead.name}</div>
+                        <div className="text-xs text-slate-400">{lead.company}</div>
+                        <div className="text-xs text-slate-400 mt-3">{lead.specialty}</div>
+                        <div className="text-xs text-slate-400">{lead.city}, {lead.state}</div>
+                        <div className="text-xs text-slate-400">{lead.oab}</div>
+                      </div>
+                    ))}
+                    {getLeadsByStage('cancelled').length === 0 && (
+                      <div className="text-center text-slate-500 text-sm py-8">Sem Lead's</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -798,7 +1236,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-semibold text-slate-200 mb-2">Email Corporativo</label>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">Email Corporativo/Pessoal</label>
                     <input
                       type="email"
                       defaultValue="joao@empresa.com"
@@ -849,6 +1287,102 @@ export default function Dashboard({ onLogout }: DashboardProps) {
           </div>
         )}
       </div>
+
+      {/* Tour Component */}
+      {showTour && (
+        <>
+          {/* Overlay escurecido */}
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"></div>
+          
+          {/* Modal do Tour */}
+          <div className={`fixed z-[60] p-4 ${
+            getModalPosition() === 'top' ? 'top-4 left-1/2 transform -translate-x-1/2' : 
+            getModalPosition() === 'bottom' ? 'bottom-4 left-1/2 transform -translate-x-1/2' : 
+            getModalPosition() === 'right' ? 'top-1/2 right-4 transform -translate-y-1/2' :
+            'inset-0 flex items-center justify-center'
+          }`}>
+            <div className="bg-law-navy-900 border border-law-gold-900/30 rounded-lg max-w-lg w-full mx-4 law-shadow-lg overflow-hidden">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-law-navy-800 to-law-navy-750 border-b border-law-gold-900/30 p-4 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-law-gold-600/20 rounded-full flex items-center justify-center">
+                    <HelpCircle className="w-5 h-5 text-law-gold-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-50">Tour Interativo</h3>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-sm text-slate-400 bg-law-navy-800/50 px-3 py-1 rounded-full">
+                    {tourStep + 1} de {tourSteps.length}
+                  </div>
+                  <button
+                    onClick={closeTour}
+                    className="w-8 h-8 hover:bg-law-navy-700/50 rounded-full flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-4 h-4 text-slate-400 hover:text-slate-200" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6">
+                <h4 className="text-xl font-bold text-law-gold-400 mb-3">
+                  {tourSteps[tourStep]?.title}
+                </h4>
+                <p className="text-slate-300 leading-relaxed mb-6 text-base">
+                  {tourSteps[tourStep]?.description}
+                </p>
+
+                {/* Progress Bar */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-slate-400">Progresso do Tour</span>
+                    <span className="text-sm text-law-gold-400 font-semibold">
+                      {Math.round(((tourStep + 1) / tourSteps.length) * 100)}%
+                    </span>
+                  </div>
+                  <div className="w-full bg-law-navy-800 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-law-gold-600 to-law-gold-500 h-2 rounded-full transition-all duration-500 ease-out"
+                      style={{ width: `${((tourStep + 1) / tourSteps.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+
+                {/* Navigation */}
+                <div className="flex justify-between items-center">
+                  <div className="flex gap-2">
+                    {tourStep > 0 && (
+                      <button
+                        onClick={prevTourStep}
+                        className="flex items-center gap-2 px-4 py-2 bg-law-navy-800 hover:bg-law-navy-700 border border-law-gold-900/30 hover:border-law-gold-600/50 text-slate-300 hover:text-slate-100 rounded-lg transition-all font-medium"
+                      >
+                        <ArrowLeft className="w-4 h-4" />
+                        Anterior
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={closeTour}
+                      className="px-4 py-2 text-slate-400 hover:text-slate-200 transition-colors font-medium"
+                    >
+                      Pular Tour
+                    </button>
+                    <button
+                      onClick={nextTourStep}
+                      className="flex items-center gap-2 px-6 py-2 bg-law-gold-600 hover:bg-law-gold-500 text-law-navy-950 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl"
+                    >
+                      {tourStep === tourSteps.length - 1 ? 'Finalizar Tour' : 'Próximo'}
+                      {tourStep !== tourSteps.length - 1 && <ArrowRight className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Modal de Detalhes do Lead */}
       {selectedLead && (

@@ -95,4 +95,90 @@
     scrollbar-width: thin;
     scrollbar-color: #d4a12a rgba(15, 23, 42, 0.1);
   }
+
+  /* Scrollbar mais discreto para colunas do funil */
+  .funnel-scrollbar::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .funnel-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 2px;
+  }
+
+  .funnel-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 2px;
+    border: none;
+  }
+
+  .funnel-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+
+  /* Firefox scrollbar para funnel */
+  .funnel-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+  }
+
+  /* Tour highlight effect */
+  @keyframes tourHighlight {
+    0% { 
+      box-shadow: 0 0 0 4px rgba(212, 161, 42, 0.4), 0 0 20px rgba(212, 161, 42, 0.3); 
+      transform: scale(1);
+    }
+    50% { 
+      box-shadow: 0 0 0 8px rgba(212, 161, 42, 0.6), 0 0 30px rgba(212, 161, 42, 0.5); 
+      transform: scale(1.02);
+    }
+    100% { 
+      box-shadow: 0 0 0 4px rgba(212, 161, 42, 0.4), 0 0 20px rgba(212, 161, 42, 0.3); 
+      transform: scale(1);
+    }
+  }
+
+  @keyframes tourPulse {
+    0%, 100% { 
+      background-color: rgba(212, 161, 42, 0.1);
+      border-color: rgba(212, 161, 42, 0.5);
+    }
+    50% { 
+      background-color: rgba(212, 161, 42, 0.2);
+      border-color: rgba(212, 161, 42, 0.8);
+    }
+  }
+
+  .tour-highlight {
+    position: relative;
+    z-index: 52 !important;
+    border-radius: 8px;
+    animation: tourHighlight 2s ease-in-out infinite;
+    transition: all 0.3s ease;
+  }
+
+  /* Destaque especial para abas/botões */
+  button.tour-highlight {
+    animation: tourPulse 1.5s ease-in-out infinite;
+  }
+
+  /* Destaque especial para abas durante o tour */
+  .tour-tab-highlight {
+    box-shadow: 0 0 0 4px rgba(212, 161, 42, 0.6) !important;
+    background: rgba(212, 161, 42, 0.2) !important;
+    border: 2px solid rgba(212, 161, 42, 0.8) !important;
+    animation: tourPulse 1.5s ease-in-out infinite !important;
+  }
+
+  .tour-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    pointer-events: none;
+  }
 }

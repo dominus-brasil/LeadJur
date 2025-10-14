@@ -40,7 +40,7 @@ export default function LoginPage({ onLogin, onShowRegister }: LoginPageProps) {
             <Scale className="w-12 h-12 text-law-gold-500" />
             <span className="text-3xl font-serif font-bold text-law-gold-500">LeadJur</span>
           </div>
-          <h1 className="text-3xl font-serif font-bold mb-3 text-slate-50">Acesso Corporativo</h1>
+          <h1 className="text-3xl font-serif font-bold mb-1 text-slate-50">Acesso Corporativo/Pessoal</h1>
           <p className="text-slate-400">Insira suas credenciais para acessar a plataforma</p>
         </div>
 
@@ -49,7 +49,7 @@ export default function LoginPage({ onLogin, onShowRegister }: LoginPageProps) {
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-slate-300 mb-2">
-                Email Corporativo
+                Email Corporativo/Pessoal
               </label>
               <input
                 type="email"
