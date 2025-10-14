@@ -42,8 +42,9 @@ module.exports = {
         'law-gradient': 'linear-gradient(135deg, #0a1929 0%, #102a43 50%, #1a3a52 100%)',
       },
       fontFamily: {
-        'serif': ['Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
+        'serif': ['Crimson Text', 'Georgia', 'Cambria', 'Times New Roman', 'Times', 'serif'],
         'sans': ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        'display': ['Crimson Text', 'Georgia', 'serif'],
       },
     },
   },

@@ -80,7 +80,7 @@ export default function LeadJurPresentation() {
     }
   };
 
-  const goToSlide = (index) => {
+  const goToSlide = (index: number) => {
     setCurrentSlide(index);
   };
 

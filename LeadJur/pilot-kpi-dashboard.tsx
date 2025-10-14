@@ -75,13 +75,13 @@ export default function PilotKPIDashboard() {
                         score >= 40 ? 'from-orange-600/20 to-red-600/20 border-orange-500/30' : 
                         'from-red-600/20 to-rose-600/20 border-red-500/30';
 
-  const getMetricStatus = (value, min, ideal) => {
+  const getMetricStatus = (value: number, min: number, ideal: number) => {
     if (value >= ideal) return { color: 'text-emerald-400', icon: '🟢', bg: 'bg-emerald-600/20' };
     if (value >= min) return { color: 'text-yellow-400', icon: '🟡', bg: 'bg-yellow-600/20' };
     return { color: 'text-red-400', icon: '🔴', bg: 'bg-red-600/20' };
   };
 
-  const weekGoals = {
+  const weekGoals: Record<number, { usage: number; leads: number; searches: number }> = {
     1: { usage: 70, leads: 20, searches: 10 },
     2: { usage: 70, leads: 50, searches: 20 },
     3: { usage: 70, leads: 150, searches: 30 },
