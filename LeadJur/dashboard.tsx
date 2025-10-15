@@ -2,6 +2,7 @@
 
 import { Search, Filter, Download, Eye, MapPin, Calendar, Phone, Mail, Building, User, LogOut, BarChart3, Target, Users, TrendingUp, Home, FileText, Settings, CreditCard, Scale, X, Plus, Trash2, HelpCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { getCities, onlyNumbers, capitalize } from '@brazilian-utils/brazilian-utils';
 
 interface DashboardProps {
   onLogout: () => void;
@@ -30,6 +31,9 @@ interface Lead {
   city: string;
   state: string;
   oab: string;
+  phone?: string;
+  email?: string;
+  address?: string;
   stage: 'no-contact' | 'contact-attempt' | 'contact-made' | 'meeting-scheduled' | 'negotiating' | 'closed' | 'future-negotiations' | 'lost' | 'cancelled';
 }
 
@@ -47,10 +51,38 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [hasSearched, setHasSearched] = useState(false);
   const [revealedContacts, setRevealedContacts] = useState<Set<string>>(new Set());
   const [addedLeads, setAddedLeads] = useState<Set<string>>(new Set());
-  const [selectedLead, setSelectedLead] = useState<{ name: string; company: string; specialty: string; city: string; state: string; oab: string } | null>(null);
+  const [selectedLead, setSelectedLead] = useState<{ name: string; company: string; specialty: string; city: string; state: string; oab: string; phone?: string; email?: string; address?: string } | null>(null);
   
   // Estados para drag and drop
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
+  
+  // Estados para modal de adição de lead
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false);
+  const [newLeadForm, setNewLeadForm] = useState({
+    name: '',
+    company: '',
+    specialty: '',
+    city: '',
+    state: '',
+    oabState: '',
+    oabNumber: '',
+    phone: '',
+    email: '',
+    street: '',
+    number: '',
+    neighborhood: ''
+  });
+
+  // Helper: title-case while preserving spaces and partial typing
+  const titleCasePreserveSpaces = (input: string) => {
+    // Split by spaces but keep empty parts to preserve multiple spaces
+    return input.split(/(\s+)/).map(part => {
+      // if it's whitespace, keep as is
+      if (/^\s+$/.test(part)) return part;
+      // capitalize first letter, preserve rest as typed (not lowercasing all)
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    }).join('');
+  };
   
   // Estados para o tour
   const [showTour, setShowTour] = useState(false);
@@ -210,7 +242,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
   // Bloquear scroll da página quando modal estiver aberto
   useEffect(() => {
-    if (selectedLead) {
+    if (selectedLead || showAddLeadModal) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -220,7 +252,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [selectedLead]);
+  }, [selectedLead, showAddLeadModal]);
 
   // Funções de drag and drop
   const handleDragStart = (e: React.DragEvent, leadId: string) => {
@@ -272,7 +304,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       position: "bottom"
     },
     {
-      title: "Funil de Vendas",
+      title: "Funil de Lead's",
       description: "Esta é a alma do sistema! Você pode arrastar e soltar os cards dos leads entre as colunas para acompanhar o progresso de cada negociação. 🚀 É só clicar, segurar e arrastar!",
       target: "funnel-section",
       position: "top"
@@ -403,11 +435,42 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   };
 
   const specialties = [
-    'Direito Civil', 'Direito Penal', 'Direito Trabalhista', 'Direito Empresarial',
-    'Direito Tributário', 'Direito Previdenciário', 'Direito Imobiliário', 'Direito de Família'
+    'Direito Civil',
+    'Direito Penal',
+    'Direito Trabalhista',
+    'Direito Empresarial',
+    'Direito Tributário',
+    'Direito Previdenciário',
+    'Direito Imobiliário',
+    'Direito de Família',
+    'Direito Ambiental',
+    'Direito Administrativo',
+    'Direito Constitucional',
+    'Direito Eleitoral',
+    'Direito Marítimo',
+    'Direito Agrário',
+    'Direito Digital / Tecnologia',
+    'Propriedade Intelectual',
+    'Direito da Concorrência',
+    'Direito do Consumidor',
+    'Direito da Saúde',
+    'Direito da Educação',
+    'Compliance',
+    'Recuperação Judicial e Falências',
+    'Contratos',
+    'Arbitragem e Mediação',
+    'Segurança Pública',
+    'Direito Bancário e Financeiro',
+    'Direito Previdenciário Empresarial',
+    "Direito Internacional",
+    "Direito Desportivo"
   ];
 
   const states = ['SP', 'RJ', 'MG', 'RS', 'PR', 'SC', 'BA', 'GO', 'ES', 'DF'];
+
+  // Lista de cidades disponível dinamicamente via pacote (retorna todas as cidades do estado)
+  // getCities expects a specific union type for state codes; cast to any to call dynamically
+  const availableCities: string[] = newLeadForm.state ? getCities(newLeadForm.state as any) : [];
 
   const mockResults: Lawyer[] = [
     {
@@ -501,6 +564,77 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       newSet.delete(lawyerId);
       return newSet;
     });
+  };
+
+  const handleAddNewLead = () => {
+    setShowAddLeadModal(true);
+  };
+
+  const handleSubmitNewLead = () => {
+    // basic email check
+    const emailValid = newLeadForm.email && /\S+@\S+\.\S+/.test(newLeadForm.email);
+    if (
+      newLeadForm.name &&
+      newLeadForm.company &&
+      newLeadForm.oabState &&
+      newLeadForm.oabNumber &&
+      newLeadForm.phone &&
+      emailValid &&
+      newLeadForm.street &&
+      newLeadForm.number &&
+      newLeadForm.neighborhood
+    ) {
+      const oabFormatted = `OAB/${newLeadForm.oabState} ${newLeadForm.oabNumber}`;
+      const fullAddress = `${newLeadForm.street}, ${newLeadForm.number} - ${newLeadForm.neighborhood}`;
+      const newLead: Lead = {
+        id: (Date.now()).toString(),
+        name: newLeadForm.name,
+        company: newLeadForm.company,
+        specialty: newLeadForm.specialty || 'Não especificado',
+        city: newLeadForm.city || 'Não informado',
+        state: newLeadForm.state || '--',
+        oab: oabFormatted,
+        phone: newLeadForm.phone,
+        email: newLeadForm.email,
+        address: fullAddress,
+        stage: 'no-contact'
+      };
+
+      setLeads(prev => [newLead, ...prev]);
+      setNewLeadForm({
+        name: '',
+        company: '',
+        specialty: '',
+        city: '',
+        state: '',
+        oabState: '',
+        oabNumber: '',
+        phone: '',
+        email: '',
+        street: '',
+        number: '',
+        neighborhood: ''
+      });
+      setShowAddLeadModal(false);
+    }
+  };
+
+  const handleCancelAddLead = () => {
+    setNewLeadForm({
+      name: '',
+      company: '',
+      specialty: '',
+      city: '',
+      state: '',
+      oabState: '',
+      oabNumber: '',
+      phone: '',
+      email: '',
+      street: '',
+      number: '',
+      neighborhood: ''
+    });
+    setShowAddLeadModal(false);
   };
 
   const stats = [
@@ -635,7 +769,22 @@ export default function Dashboard({ onLogout }: DashboardProps) {
 
             {/* Sales Funnel */}
             <div className="mb-2" id="funnel-section">
-              <h2 className="text-2xl font-bold mb-6 mt-8 text-slate-50">Funil de Vendas</h2>
+              <div className="flex items-center justify-between mb-6 mt-8">
+                <h2 className="text-2xl font-bold text-slate-50">Funil de Lead's</h2>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={handleAddNewLead}
+                    className="flex items-center gap-2 px-4 py-2 bg-law-gold-600 hover:bg-law-gold-500 rounded transition-all text-law-navy-950 font-semibold"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Adicionar
+                  </button>
+                  <button className="flex items-center gap-2 px-4 py-2 bg-law-navy-800/80 hover:bg-law-navy-700/80 rounded transition-all border border-law-gold-900/30 text-slate-200 font-semibold">
+                    <Download className="w-4 h-4" />
+                    Exportar
+                  </button>
+                </div>
+              </div>
               <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 {/* Sem Contato */}
                 <div 
@@ -682,7 +831,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-blue-500/20 backdrop-blur-sm border border-blue-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-blue-300 text-sm text-center">Tentativa de Contato ({getLeadsByStage('contact-attempt').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('contact-attempt').map((lead) => (
                       <div 
                         key={lead.id}
@@ -716,7 +865,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-cyan-500/20 backdrop-blur-sm border border-cyan-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-cyan-300 text-sm text-center">Contato Feito ({getLeadsByStage('contact-made').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('contact-made').map((lead) => (
                       <div 
                         key={lead.id}
@@ -750,7 +899,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-law-gold-500/20 backdrop-blur-sm border border-law-gold-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-law-gold-300 text-sm text-center">Reunião Agendada ({getLeadsByStage('meeting-scheduled').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('meeting-scheduled').map((lead) => (
                       <div 
                         key={lead.id}
@@ -784,7 +933,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-purple-500/20 backdrop-blur-sm border border-purple-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-purple-300 text-sm text-center">Em Negociação ({getLeadsByStage('negotiating').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('negotiating').map((lead) => (
                       <div 
                         key={lead.id}
@@ -818,7 +967,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-emerald-500/20 backdrop-blur-sm border border-emerald-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-emerald-300 text-sm text-center">Fechado ({getLeadsByStage('closed').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('closed').map((lead) => (
                       <div 
                         key={lead.id}
@@ -852,7 +1001,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-indigo-500/20 backdrop-blur-sm border border-indigo-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-indigo-300 text-sm text-center">Negociações Futuras ({getLeadsByStage('future-negotiations').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('future-negotiations').map((lead) => (
                       <div 
                         key={lead.id}
@@ -886,7 +1035,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-red-500/20 backdrop-blur-sm border border-red-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-red-300 text-sm text-center">Perdidos ({getLeadsByStage('lost').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('lost').map((lead) => (
                       <div 
                         key={lead.id}
@@ -920,7 +1069,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <div className="bg-orange-500/20 backdrop-blur-sm border border-orange-500/30 rounded-lg p-3 mb-3">
                     <h3 className="font-bold text-orange-300 text-sm text-center">Cancelados ({getLeadsByStage('cancelled').length})</h3>
                   </div>
-                  <div className="space-y-2 max-h-96 overflow-y-auto custom-scrollbar min-h-[200px]">
+                  <div className="space-y-2 max-h-96 overflow-y-auto funnel-scrollbar min-h-[200px]">
                     {getLeadsByStage('cancelled').map((lead) => (
                       <div 
                         key={lead.id}
@@ -1382,6 +1531,292 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             </div>
           </div>
         </>
+      )}
+
+      {/* Modal de Adicionar Lead */}
+      {showAddLeadModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-law-navy-900 border border-law-gold-900/30 rounded-lg max-w-lg w-full max-h-[85vh] law-shadow-lg flex flex-col my-8">
+            <div className="bg-law-navy-900 border-b border-law-gold-900/30 p-4 flex justify-between items-center flex-shrink-0">
+              <h2 className="text-xl font-bold text-slate-50">Adicionar Novo Lead</h2>
+              <button
+                onClick={handleCancelAddLead}
+                className="p-2 hover:bg-law-navy-800/50 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-300" />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              <div>
+                <label className="block text-sm font-semibold text-slate-200 mb-2">Nome *</label>
+                <input
+                  type="text"
+                  value={newLeadForm.name}
+                  onChange={(e) => {
+                    const titled = titleCasePreserveSpaces(e.target.value);
+                    setNewLeadForm(prev => ({ ...prev, name: titled }));
+                  }}
+                  placeholder="Nome completo do advogado"
+                  className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-200 mb-2">Empresa *</label>
+                <input
+                  type="text"
+                  value={newLeadForm.company}
+                  onChange={(e) => {
+                    const titled = titleCasePreserveSpaces(e.target.value);
+                    setNewLeadForm(prev => ({ ...prev, company: titled }));
+                  }}
+                  placeholder="Nome do escritório de advocacia"
+                  className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-200 mb-2">OAB *</label>
+                <div className="grid grid-cols-2 gap-3">
+                  <select
+                    value={newLeadForm.oabState}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, oabState: e.target.value }))}
+                    className="px-3 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100"
+                    required
+                  >
+                    <option value="">Estado</option>
+                    <option value="AC">AC</option>
+                    <option value="AL">AL</option>
+                    <option value="AP">AP</option>
+                    <option value="AM">AM</option>
+                    <option value="BA">BA</option>
+                    <option value="CE">CE</option>
+                    <option value="DF">DF</option>
+                    <option value="ES">ES</option>
+                    <option value="GO">GO</option>
+                    <option value="MA">MA</option>
+                    <option value="MT">MT</option>
+                    <option value="MS">MS</option>
+                    <option value="MG">MG</option>
+                    <option value="PA">PA</option>
+                    <option value="PB">PB</option>
+                    <option value="PR">PR</option>
+                    <option value="PE">PE</option>
+                    <option value="PI">PI</option>
+                    <option value="RJ">RJ</option>
+                    <option value="RN">RN</option>
+                    <option value="RS">RS</option>
+                    <option value="RO">RO</option>
+                    <option value="RR">RR</option>
+                    <option value="SC">SC</option>
+                    <option value="SP">SP</option>
+                    <option value="SE">SE</option>
+                    <option value="TO">TO</option>
+                  </select>
+                  <input
+                    type="text"
+                    value={newLeadForm.oabNumber}
+                    onChange={(e) => {
+                      // store only digits, max 9
+                      const digits = onlyNumbers(e.target.value).slice(0, 9);
+                      setNewLeadForm(prev => ({ ...prev, oabNumber: digits }));
+                    }}
+                    placeholder="123456"
+                    className="px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                    required
+                  />
+                </div>
+                {newLeadForm.oabState && newLeadForm.oabNumber && (
+                  <div className="mt-2 text-sm text-slate-300">
+                    Resultado: OAB/{newLeadForm.oabState} {(() => {
+                      const d = newLeadForm.oabNumber;
+                      if (d.length > 3) {
+                        return `${d.slice(0, d.length - 3)}.${d.slice(d.length - 3)}`;
+                      }
+                      return d;
+                    })()}
+                  </div>
+                )}
+                  <div className="mt-4">
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Especialidade <span className="text-red-400">*</span></label>
+                  <select
+                    value={newLeadForm.specialty}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, specialty: e.target.value }))}
+                    className="w-full px-3 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100"
+                    required
+                  >
+                    <option value="">Selecione uma especialidade</option>
+                    {specialties.map(specialty => (
+                      <option key={specialty} value={specialty}>{specialty}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="mt-4">
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Telefone *</label>
+                  <input
+                    type="tel"
+                    value={newLeadForm.phone}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={newLeadForm.email}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, email: e.target.value }))}
+                    placeholder="contato@exemplo.com"
+                    className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                    required
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">Endereço (Rua) *</label>
+                    <input
+                      type="text"
+                      value={newLeadForm.street}
+                      onChange={(e) => {
+                        // allow letters and spaces only, preserve accents; apply title case
+                        const lettersOnly = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, '');
+                        const titled = titleCasePreserveSpaces(lettersOnly);
+                        setNewLeadForm(prev => ({ ...prev, street: titled }));
+                      }}
+                      placeholder="Rua Exemplo"
+                      className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">Número *</label>
+                    <input
+                      type="text"
+                      value={newLeadForm.number}
+                      onChange={(e) => {
+                        // only digits, max 4
+                        const digits = onlyNumbers(e.target.value).slice(0, 4);
+                        setNewLeadForm(prev => ({ ...prev, number: digits }));
+                      }}
+                      placeholder="123"
+                      className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">Bairro *</label>
+                    <input
+                      type="text"
+                      value={newLeadForm.neighborhood}
+                      onChange={(e) => {
+                        // letters and spaces only, title-case
+                        const lettersOnly = e.target.value.replace(/[^A-Za-zÀ-ÿ\s]/g, '');
+                        const titled = titleCasePreserveSpaces(lettersOnly);
+                        setNewLeadForm(prev => ({ ...prev, neighborhood: titled }));
+                      }}
+                      placeholder="Bairro"
+                      className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                      required
+                    />
+                  </div>
+                </div>
+                {/* Validação: mínimo 5 dígitos */}
+                {newLeadForm.oabNumber && newLeadForm.oabNumber.length < 5 && (
+                  <div className="mt-2 text-sm text-red-400">O número da OAB precisa ter ao menos 5 dígitos.</div>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-200 mb-2">Especialidade <span className="text-white">*</span></label>
+                <select
+                  value={newLeadForm.specialty}
+                  onChange={(e) => setNewLeadForm(prev => ({ ...prev, specialty: e.target.value }))}
+                  className="w-full px-3 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100"
+                >
+                  <option value="">Selecione uma especialidade</option>
+                  {specialties.map(specialty => (
+                    <option key={specialty} value={specialty}>{specialty}</option>
+                  ))}
+                </select>
+              </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Estado <span className="text-white">*</span></label>
+                  <select
+                    value={newLeadForm.state}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, state: e.target.value, city: '' }))}
+                    className="w-full px-3 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100"
+                  >
+                    <option value="">UF</option>
+                    {states.map(state => (
+                      <option key={state} value={state}>{state}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Cidade <span className="text-white">*</span></label>
+                  <select
+                    value={newLeadForm.city}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, city: e.target.value }))}
+                    disabled={!newLeadForm.state}
+                    className="w-full px-3 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <option value="">
+                      {!newLeadForm.state ? 'Selecione um estado primeiro' : 'Selecione uma cidade'}
+                    </option>
+                    {availableCities.map((city) => (
+                      <option key={city} value={city}>{city}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="text-xs text-slate-400 mt-2">
+                * Campos obrigatórios
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-law-gold-900/30 flex gap-3 justify-end flex-shrink-0">
+              <button
+                onClick={handleCancelAddLead}
+                className="px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 text-slate-200 rounded font-semibold hover:bg-law-navy-700/80 transition-all"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSubmitNewLead}
+                disabled={
+                  !newLeadForm.name ||
+                  !newLeadForm.company ||
+                  !newLeadForm.specialty ||
+                  !newLeadForm.state ||
+                  !newLeadForm.city ||
+                  !newLeadForm.oabState ||
+                  !newLeadForm.oabNumber ||
+                  newLeadForm.oabNumber.length < 5 ||
+                  !newLeadForm.phone ||
+                  !newLeadForm.email ||
+                  !/\S+@\S+\.\S+/.test(newLeadForm.email) ||
+                  !newLeadForm.street ||
+                  !newLeadForm.number ||
+                  !newLeadForm.neighborhood
+                }
+                className="px-4 py-2 bg-law-gold-600 hover:bg-law-gold-500 text-law-navy-950 rounded font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Adicionar Lead
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Modal de Detalhes do Lead */}
