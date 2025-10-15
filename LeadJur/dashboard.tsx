@@ -1548,7 +1548,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             </div>
             
             <div className="p-4 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-              <div>
+              <div className="mb-4">
                 <label className="block text-sm font-semibold text-slate-200 mb-2">Nome *</label>
                 <input
                   type="text"
@@ -1563,7 +1563,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 />
               </div>
 
-              <div>
+              <div className="mb-4">
                 <label className="block text-sm font-semibold text-slate-200 mb-2">Empresa *</label>
                 <input
                   type="text"
@@ -1578,7 +1578,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 />
               </div>
 
-              <div>
+              <div className="mb-4">
                 <label className="block text-sm font-semibold text-slate-200 mb-2">OAB *</label>
                 <div className="grid grid-cols-2 gap-3">
                   <select
@@ -1640,8 +1640,10 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     })()}
                   </div>
                 )}
-                  <div className="mt-4">
-                  <label className="block text-sm font-semibold text-slate-200 mb-2">Especialidade <span className="text-red-400">*</span></label>
+
+                {/* Specialty select placed under OAB as requested */}
+                <div className="mb-4">
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Especialidade <span className="text-white">*</span></label>
                   <select
                     value={newLeadForm.specialty}
                     onChange={(e) => setNewLeadForm(prev => ({ ...prev, specialty: e.target.value }))}
@@ -1649,24 +1651,39 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     required
                   >
                     <option value="">Selecione uma especialidade</option>
-                    {specialties.map(specialty => (
-                      <option key={specialty} value={specialty}>{specialty}</option>
-                    ))}
+                    <option value="Direito Civil">Direito Civil</option>
+                    <option value="Direito Penal">Direito Penal</option>
+                    <option value="Direito Trabalhista">Direito Trabalhista</option>
+                    <option value="Direito Empresarial">Direito Empresarial</option>
+                    <option value="Direito Tributário">Direito Tributário</option>
+                    <option value="Direito Previdenciário">Direito Previdenciário</option>
+                    <option value="Direito Imobiliário">Direito Imobiliário</option>
+                    <option value="Direito de Família">Direito de Família</option>
+                    <option value="Direito Ambiental">Direito Ambiental</option>
+                    <option value="Direito Administrativo">Direito Administrativo</option>
+                    <option value="Direito Constitucional">Direito Constitucional</option>
+                    <option value="Direito Eleitoral">Direito Eleitoral</option>
+                    <option value="Direito Marítimo">Direito Marítimo</option>
+                    <option value="Direito Agrário">Direito Agrário</option>
+                    <option value="Direito Digital / Tecnologia">Direito Digital / Tecnologia</option>
+                    <option value="Propriedade Intelectual">Propriedade Intelectual</option>
+                    <option value="Direito da Concorrência">Direito da Concorrência</option>
+                    <option value="Direito do Consumidor">Direito do Consumidor</option>
+                    <option value="Direito da Saúde">Direito da Saúde</option>
+                    <option value="Direito da Educação">Direito da Educação</option>
+                    <option value="Compliance">Compliance</option>
+                    <option value="Recuperação Judicial e Falências">Recuperação Judicial e Falências</option>
+                    <option value="Contratos">Contratos</option>
+                    <option value="Arbitragem e Mediação">Arbitragem e Mediação</option>
+                    <option value="Segurança Pública">Segurança Pública</option>
+                    <option value="Direito Bancário e Financeiro">Direito Bancário e Financeiro</option>
+                    <option value="Direito Previdenciário Empresarial">Direito Previdenciário Empresarial</option>
+                    <option value="Direito Internacional">Direito Internacional</option>
+                    <option value="Direito Desportivo">Direito Desportivo</option>
                   </select>
                 </div>
-                <div className="mt-4">
-                  <label className="block text-sm font-semibold text-slate-200 mb-2">Telefone *</label>
-                  <input
-                    type="tel"
-                    value={newLeadForm.phone}
-                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, phone: e.target.value }))}
-                    placeholder="(11) 99999-9999"
-                    className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
-                    required
-                  />
-                </div>
 
-                <div>
+                <div className="mb-4">
                   <label className="block text-sm font-semibold text-slate-200 mb-2">Email *</label>
                   <input
                     type="email"
@@ -1678,7 +1695,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   />
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-3 mb-4">
                   <div>
                     <label className="block text-sm font-semibold text-slate-200 mb-2">Endereço (Rua) *</label>
                     <input
@@ -1733,21 +1750,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-200 mb-2">Especialidade <span className="text-white">*</span></label>
-                <select
-                  value={newLeadForm.specialty}
-                  onChange={(e) => setNewLeadForm(prev => ({ ...prev, specialty: e.target.value }))}
-                  className="w-full px-3 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100"
-                >
-                  <option value="">Selecione uma especialidade</option>
-                  {specialties.map(specialty => (
-                    <option key={specialty} value={specialty}>{specialty}</option>
-                  ))}
-                </select>
-              </div>
-
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <label className="block text-sm font-semibold text-slate-200 mb-2">Estado <span className="text-white">*</span></label>
                   <select
