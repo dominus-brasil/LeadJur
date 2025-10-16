@@ -12,6 +12,7 @@
     "@brazilian-utils/brazilian-utils": "^1.0.0-rc.12",
     "@types/react-beautiful-dnd": "^13.1.8",
     "@types/react-input-mask": "^3.0.6",
+    "firebase": "^12.4.0",
     "lucide-react": "^0.294.0",
     "next": "^14.0.0",
     "react": "^18.2.0",

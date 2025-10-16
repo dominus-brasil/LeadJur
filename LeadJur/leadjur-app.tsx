@@ -1,19 +1,34 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LoginPage from './login-page';
 import RegisterPage from './register-page';
 import SuccessPage from './success-page';
 import Dashboard from './dashboard';
+import { useAuth } from '../lib/useAuth';
+import { logoutUser } from '../lib/authService';
 
 type AppState = 'login' | 'register' | 'success' | 'dashboard';
 
 export default function LeadJurApp() {
   const [appState, setAppState] = useState<AppState>('login');
   const [userEmail, setUserEmail] = useState('');
+  const { user, profile, loading, authenticated } = useAuth();
+
+  // Gerenciar estado baseado na autenticação
+  useEffect(() => {
+    if (!loading) {
+      if (authenticated && user) {
+        setAppState('dashboard');
+      } else {
+        setAppState('login');
+      }
+    }
+  }, [loading, authenticated, user]);
 
   const handleLogin = () => {
-    setAppState('dashboard');
+    // O estado será atualizado automaticamente pelo useAuth
+    console.log('Login realizado com sucesso');
   };
 
   const handleRegister = (email: string) => {
@@ -25,9 +40,15 @@ export default function LeadJurApp() {
     setAppState('dashboard');
   };
 
-  const handleLogout = () => {
-    setAppState('login');
-    setUserEmail('');
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setAppState('login');
+      setUserEmail('');
+      console.log('Logout realizado com sucesso');
+    } catch (error) {
+      console.error('Erro ao fazer logout:', error);
+    }
   };
 
   const showRegister = () => {
@@ -37,6 +58,18 @@ export default function LeadJurApp() {
   const backToLogin = () => {
     setAppState('login');
   };
+
+  // Mostrar loading enquanto verifica autenticação
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-law-navy-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-law-gold-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-400">Verificando autenticação...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

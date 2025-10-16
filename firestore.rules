@@ -1,0 +1,39 @@
+// Regras de segurança para o Firestore - LeadJur
+// Estrutura atualizada com leads específicos por usuário
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regra para documentos de usuários
+    match /users/{userId} {
+      // Usuários podem ler e escrever apenas seus próprios dados
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Subcoleção de leads do usuário
+      match /leads/{leadId} {
+        // Usuários podem gerenciar apenas seus próprios leads
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+    
+    // Coleção de advogados/lawyers - compartilhada entre usuários
+    match /lawyers/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Coleção de atividades - apenas usuários autenticados
+    match /activities/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Coleção de estatísticas - apenas usuários autenticados
+    match /stats/{document} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Regra padrão - negar acesso a outros documentos não especificados
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

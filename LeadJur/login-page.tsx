@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Eye, EyeOff, Shield, Scale, Zap } from 'lucide-react';
+import { loginUser } from '../lib/authService';
+import { testEnvVars } from '../lib/envTest';
 
 interface LoginPageProps {
   onLogin: () => void;
@@ -14,16 +16,39 @@ export default function LoginPage({ onLogin, onShowRegister }: LoginPageProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // Testar variáveis de ambiente quando a página carrega
+  useEffect(() => {
+    console.log('=== TESTANDO VARIÁVEIS DE AMBIENTE ===');
+    testEnvVars();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     
-    // Simular login
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const { user, profile } = await loginUser(email, password);
+      console.log('Login realizado com sucesso:', { user: user.email, profile: profile.fullName });
+      
+      // Salvar dados do usuário no localStorage se "lembrar" estiver marcado
+      if (rememberMe) {
+        localStorage.setItem('rememberUser', 'true');
+        localStorage.setItem('userEmail', email);
+      } else {
+        localStorage.removeItem('rememberUser');
+        localStorage.removeItem('userEmail');
+      }
+      
       onLogin();
-    }, 1500);
+    } catch (error: any) {
+      console.error('Erro no login:', error);
+      setError(error.message || 'Erro ao fazer login. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -46,6 +71,12 @@ export default function LoginPage({ onLogin, onShowRegister }: LoginPageProps) {
 
         {/* Login Form */}
         <div className="bg-law-navy-900/80 backdrop-blur-xl border-2 border-law-gold-900/30 rounded-lg p-8 law-shadow-lg">
+          {error && (
+            <div className="mb-6 p-4 bg-red-900/20 border-2 border-red-600/30 rounded-lg">
+              <p className="text-red-400 text-sm font-medium">{error}</p>
+            </div>
+          )}
+          
           <form onSubmit={handleLogin} className="space-y-6">
             <div>
               <label htmlFor="email" className="block text-sm font-bold text-slate-300 mb-2">

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Eye, EyeOff, CheckCircle, ArrowLeft, Scale } from 'lucide-react';
 import InputMask from 'react-input-mask';
+import { registerUser } from '../lib/authService';
 
 interface RegisterPageProps {
   onRegister: (email: string) => void;
@@ -24,6 +25,7 @@ export default function RegisterPage({ onRegister, onBackToLogin }: RegisterPage
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [generalError, setGeneralError] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -78,11 +80,36 @@ export default function RegisterPage({ onRegister, onBackToLogin }: RegisterPage
     if (!validateForm()) return;
     
     setIsLoading(true);
+    setGeneralError('');
     
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      console.log('=== INICIANDO PROCESSO DE REGISTRO ===');
+      
+      console.log('Tentando registrar usuário com dados:', {
+        email: formData.email,
+        fullName: formData.fullName,
+        company: formData.company,
+        profession: formData.profession,
+        phone: formData.phone
+      });
+      
+      const { user, profile } = await registerUser({
+        email: formData.email,
+        password: formData.password,
+        fullName: formData.fullName,
+        company: formData.company,
+        profession: formData.profession,
+        phone: formData.phone
+      });
+      
+      console.log('Registro realizado com sucesso:', { user: user.email, profile: profile.fullName });
       onRegister(formData.email);
-    }, 2000);
+    } catch (error: any) {
+      console.error('Erro no registro:', error);
+      setGeneralError(error.message || 'Erro ao criar conta. Tente novamente.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string | boolean) => {
@@ -150,6 +177,12 @@ export default function RegisterPage({ onRegister, onBackToLogin }: RegisterPage
         </div>
 
         <div className="bg-law-navy-900/80 backdrop-blur-xl border-2 border-law-gold-900/30 rounded-lg p-8 law-shadow-lg">
+          {generalError && (
+            <div className="mb-6 p-4 bg-red-900/20 border-2 border-red-600/30 rounded-lg">
+              <p className="text-red-400 text-sm font-medium">{generalError}</p>
+            </div>
+          )}
+          
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
               <label htmlFor="fullName" className="block text-sm font-bold text-slate-300 mb-2">Nome Completo *</label>

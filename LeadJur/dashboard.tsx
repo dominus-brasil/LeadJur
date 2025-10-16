@@ -3,24 +3,15 @@
 import { Search, Filter, Download, Eye, MapPin, Calendar, Phone, Mail, Building, User, LogOut, BarChart3, Target, Users, TrendingUp, Home, FileText, Settings, CreditCard, Scale, X, Plus, Trash2, HelpCircle, ArrowRight, ArrowLeft } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { getCities, onlyNumbers, capitalize } from '@brazilian-utils/brazilian-utils';
+import { leadService } from '../lib/leadService';
+import { lawyerService, type Lawyer, type LawyerSearchFilters } from '../lib/lawyerService';
+import { activityService } from '../lib/activityService';
+import { statsService, type DashboardStats } from '../lib/statsService';
+import { useAuth } from '../lib/useAuth';
+import { migrateLeadsToUserStructure } from '../lib/migrationService';
 
 interface DashboardProps {
   onLogout: () => void;
-}
-
-interface Lawyer {
-  id: string;
-  name: string;
-  oab: string;
-  specialty: string;
-  city: string;
-  state: string;
-  phone: string;
-  email: string;
-  address: string;
-  firm: string;
-  experience: string;
-  status: 'active' | 'inactive';
 }
 
 interface Lead {
@@ -40,6 +31,7 @@ interface Lead {
 type TabType = 'dashboard' | 'search' | 'history' | 'settings';
 
 export default function Dashboard({ onLogout }: DashboardProps) {
+  const { user, profile } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSpecialty, setSelectedSpecialty] = useState('');
@@ -51,7 +43,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   const [hasSearched, setHasSearched] = useState(false);
   const [revealedContacts, setRevealedContacts] = useState<Set<string>>(new Set());
   const [addedLeads, setAddedLeads] = useState<Set<string>>(new Set());
-  const [selectedLead, setSelectedLead] = useState<{ name: string; company: string; specialty: string; city: string; state: string; oab: string; phone?: string; email?: string; address?: string } | null>(null);
+  const [selectedLawyer, setSelectedLawyer] = useState<Lawyer | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   
   // Estados para drag and drop
   const [draggedLead, setDraggedLead] = useState<string | null>(null);
@@ -87,158 +80,206 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   // Estados para o tour
   const [showTour, setShowTour] = useState(false);
   const [tourStep, setTourStep] = useState(0);
-  const [leads, setLeads] = useState<Lead[]>([
-    {
-      id: '1',
-      name: 'João Silva',
-      company: 'Silva & Associados',
-      specialty: 'Direito Tributário',
-      city: 'São Paulo',
-      state: 'SP',
-      oab: 'OAB/SP 234.567',
-      stage: 'no-contact'
-    },
-    {
-      id: '2',
-      name: 'Maria Santos',
-      company: 'Santos Advocacia',
-      specialty: 'Direito Civil',
-      city: 'Rio de Janeiro',
-      state: 'RJ',
-      oab: 'OAB/RJ 345.678',
-      stage: 'no-contact'
-    },
-    {
-      id: '3',
-      name: 'Pedro Costa',
-      company: 'Costa Advogados',
-      specialty: 'Direito Penal',
-      city: 'Belo Horizonte',
-      state: 'MG',
-      oab: 'OAB/MG 456.789',
-      stage: 'no-contact'
-    },
-    {
-      id: '4',
-      name: 'Ana Rodrigues',
-      company: 'Rodrigues Empresarial',
-      specialty: 'Direito Empresarial',
-      city: 'Campinas',
-      state: 'SP',
-      oab: 'OAB/SP 567.890',
-      stage: 'contact-attempt'
-    },
-    {
-      id: '5',
-      name: 'Carlos Mendes',
-      company: 'Mendes Trabalhista',
-      specialty: 'Direito Trabalhista',
-      city: 'Curitiba',
-      state: 'PR',
-      oab: 'OAB/PR 678.901',
-      stage: 'contact-attempt'
-    },
-    {
-      id: '6',
-      name: 'Fernanda Lima',
-      company: 'Lima Ambiental',
-      specialty: 'Direito Ambiental',
-      city: 'Porto Alegre',
-      state: 'RS',
-      oab: 'OAB/RS 789.012',
-      stage: 'contact-made'
-    },
-    {
-      id: '7',
-      name: 'Roberto Alves',
-      company: 'Alves Imóveis',
-      specialty: 'Direito Imobiliário',
-      city: 'Florianópolis',
-      state: 'SC',
-      oab: 'OAB/SC 890.123',
-      stage: 'contact-made'
-    },
-    {
-      id: '8',
-      name: 'Juliana Ferreira',
-      company: 'Ferreira Previdência',
-      specialty: 'Direito Previdenciário',
-      city: 'Salvador',
-      state: 'BA',
-      oab: 'OAB/BA 901.234',
-      stage: 'meeting-scheduled'
-    },
-    {
-      id: '9',
-      name: 'Ricardo Souza',
-      company: 'Souza Digital Law',
-      specialty: 'Direito Digital',
-      city: 'Brasília',
-      state: 'DF',
-      oab: 'OAB/DF 012.345',
-      stage: 'meeting-scheduled'
-    },
-    {
-      id: '10',
-      name: 'Patrícia Oliveira',
-      company: 'Oliveira Societário',
-      specialty: 'Direito Societário',
-      city: 'Goiânia',
-      state: 'GO',
-      oab: 'OAB/GO 123.456',
-      stage: 'negotiating'
-    },
-    {
-      id: '11',
-      name: 'Leonardo Martins',
-      company: 'Martins Contratos',
-      specialty: 'Direito Contratual',
-      city: 'Vitória',
-      state: 'ES',
-      oab: 'OAB/ES 234.567',
-      stage: 'closed'
-    },
-    {
-      id: '12',
-      name: 'Camila Rocha',
-      company: 'Rocha & Consumidor',
-      specialty: 'Direito do Consumidor',
-      city: 'Fortaleza',
-      state: 'CE',
-      oab: 'OAB/CE 345.678',
-      stage: 'closed'
-    },
-    {
-      id: '13',
-      name: 'Gabriel Santos',
-      company: 'Santos International Law',
-      specialty: 'Direito Internacional',
-      city: 'Recife',
-      state: 'PE',
-      oab: 'OAB/PE 456.789',
-      stage: 'future-negotiations'
-    },
-    {
-      id: '14',
-      name: 'Bruno Oliveira',
-      company: 'Oliveira Eleitoral',
-      specialty: 'Direito Eleitoral',
-      city: 'São Luís',
-      state: 'MA',
-      oab: 'OAB/MA 567.890',
-      stage: 'lost'
-    },
-    {
-      id: '15',
-      name: 'Alessandra Costa',
-      company: 'Costa Administrativo',
-      specialty: 'Direito Administrativo',
-      city: 'Manaus',
-      state: 'AM',
-      oab: 'OAB/AM 678.901',
-      stage: 'cancelled'
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [leadActivities, setLeadActivities] = useState<any[]>([]);
+  const [isLoadingActivities, setIsLoadingActivities] = useState(false);
+
+  // Função para registrar ligação
+  const handleCallLead = async () => {
+    if (!selectedLead) return;
+    
+    try {
+      await activityService.logCallMade(
+        selectedLead.id, 
+        selectedLead.name,
+        undefined, // duração - poderia ser um input
+        'Ligação realizada através do painel'
+      );
+      
+      // Recarregar atividades
+      await loadLeadActivities(selectedLead.id);
+      
+      // Mostrar feedback
+      alert('Ligação registrada com sucesso!');
+    } catch (error) {
+      console.error('Erro ao registrar ligação:', error);
+      alert('Erro ao registrar ligação. Tente novamente.');
     }
-  ]);
+  };
+
+  // Função para registrar e-mail
+  const handleEmailLead = async () => {
+    if (!selectedLead) return;
+    
+    try {
+      await activityService.logEmailSent(
+        selectedLead.id, 
+        selectedLead.name,
+        'E-mail comercial enviado' // assunto
+      );
+      
+      // Recarregar atividades
+      await loadLeadActivities(selectedLead.id);
+      
+      // Mostrar feedback
+      alert('E-mail registrado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao registrar e-mail:', error);
+      alert('Erro ao registrar e-mail. Tente novamente.');
+    }
+  };
+
+  // Função para carregar atividades de um lead
+  const loadLeadActivities = async (leadId: string) => {
+    try {
+      setIsLoadingActivities(true);
+      const activities = await activityService.getActivitiesByLead(leadId);
+      setLeadActivities(activities);
+    } catch (error) {
+      console.error('Erro ao carregar atividades do lead:', error);
+      setLeadActivities([]);
+    } finally {
+      setIsLoadingActivities(false);
+    }
+  };
+
+  // Carregar atividades quando um lead é selecionado
+  useEffect(() => {
+    if (selectedLead && selectedLead.id) {
+      loadLeadActivities(selectedLead.id);
+    } else {
+      setLeadActivities([]);
+    }
+  }, [selectedLead]);
+
+  // Função para obter cor baseada no estágio (cores exatas das colunas)
+  const getStageColor = (stage: string) => {
+    const stageColors: Record<string, string> = {
+      'no-contact': 'bg-slate-500',           // Sem Contato - Cinza
+      'contact-attempt': 'bg-blue-500',       // Tentativa de Contato - Azul
+      'contact-made': 'bg-cyan-500',          // Contato Realizado - Ciano
+      'meeting-scheduled': 'bg-law-gold-500', // Reunião Agendada - Dourado (law-gold-500)
+      'negotiating': 'bg-purple-500',         // Em Negociação - Roxo
+      'closed': 'bg-emerald-500',             // Fechado - Verde Esmeralda
+      'future-negotiations': 'bg-indigo-500', // Negociações Futuras - Índigo
+      'lost': 'bg-red-500',                   // Perdido - Vermelho
+      'cancelled': 'bg-orange-500'            // Cancelado - Laranja
+    };
+    return stageColors[stage] || 'bg-slate-400';
+  };
+
+  // Função para obter a cor da atividade baseada no tipo e estágio
+  const getActivityColor = (activity: any) => {
+    // Para mudanças de estágio, usar a cor do estágio de destino
+    if (activity.type === 'stage_change' && activity.toStage) {
+      return getStageColor(activity.toStage);
+    }
+    
+    // Para outros tipos, usar cores específicas
+    const colors: Record<string, string> = {
+      'lead_created': 'bg-green-500',
+      'contact_revealed': 'bg-law-gold-400',
+      'call_made': 'bg-emerald-400',
+      'email_sent': 'bg-purple-400',
+      'meeting_scheduled': 'bg-cyan-400',
+      'note_added': 'bg-slate-400'
+    };
+    return colors[activity.type] || 'bg-slate-400';
+  };
+
+  // Função para formatar data
+  const formatActivityDate = (timestamp: any) => {
+    if (!timestamp) return 'Data não disponível';
+    
+    let date: Date;
+    if (timestamp.toDate) {
+      // Firestore Timestamp
+      date = timestamp.toDate();
+    } else if (timestamp instanceof Date) {
+      date = timestamp;
+    } else {
+      date = new Date(timestamp);
+    }
+    
+    return date.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Carrega leads e estatísticas do Firebase ao montar o componente
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setIsLoadingLeads(true);
+        setIsLoadingStats(true);
+        
+        // Executar migração de leads para estrutura específica por usuário
+        console.log('🔄 Verificando se precisa migrar leads...');
+        await migrateLeadsToUserStructure();
+        
+        // Carregar leads e estatísticas em paralelo
+        const [firebaseLeads, stats] = await Promise.all([
+          leadService.getLeads(),
+          statsService.getDashboardStats()
+        ]);
+        
+        setLeads(firebaseLeads);
+        setDashboardStats(stats);
+
+        // Se não houver advogados no banco, adicionar alguns de exemplo
+        if (stats.totalLawyers === 0) {
+          console.log('Banco de advogados vazio, adicionando exemplos...');
+          try {
+            await lawyerService.addSampleLawyers();
+            // Recarregar estatísticas após adicionar advogados
+            const newStats = await statsService.getDashboardStats();
+            setDashboardStats(newStats);
+          } catch (error) {
+            console.error('Erro ao adicionar advogados de exemplo:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error);
+        
+        // Em caso de erro, manter alguns leads de exemplo
+        setLeads([
+          {
+            id: '1',
+            name: 'João Silva',
+            company: 'Silva & Associados',
+            specialty: 'Direito Tributário',
+            city: 'São Paulo',
+            state: 'SP',
+            oab: 'OAB/SP 234.567',
+            stage: 'no-contact'
+          },
+          {
+            id: '2',
+            name: 'Maria Santos',
+            company: 'Santos Advocacia',
+            specialty: 'Direito Civil',
+            city: 'Rio de Janeiro',
+            state: 'RJ',
+            oab: 'OAB/RJ 345.678',
+            stage: 'contact-attempt'
+          }
+        ]);
+      } finally {
+        setIsLoadingLeads(false);
+        setIsLoadingStats(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
 
   // Bloquear scroll da página quando modal estiver aberto
   useEffect(() => {
@@ -265,18 +306,51 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     e.dataTransfer.dropEffect = 'move';
   };
 
-  const handleDrop = (e: React.DragEvent, targetStage: Lead['stage']) => {
+  const handleDrop = async (e: React.DragEvent, targetStage: Lead['stage']) => {
     e.preventDefault();
     
     if (draggedLead) {
-      setLeads(prevLeads => 
-        prevLeads.map(lead => 
-          lead.id === draggedLead 
-            ? { ...lead, stage: targetStage }
-            : lead
-        )
-      );
-      setDraggedLead(null);
+      try {
+        // Encontrar o lead atual para registrar a mudança
+        const currentLead = leads.find(lead => lead.id === draggedLead);
+        if (!currentLead) return;
+
+        const previousStage = currentLead.stage;
+        
+        // Atualiza no Firebase
+        await leadService.updateLeadStage(draggedLead, targetStage);
+        
+        // Registrar a atividade de mudança de estágio
+        await activityService.logStageChange(
+          draggedLead, 
+          currentLead.name, 
+          previousStage, 
+          targetStage
+        );
+        
+        // Atualiza na lista local
+        setLeads(prevLeads => 
+          prevLeads.map(lead => 
+            lead.id === draggedLead 
+              ? { ...lead, stage: targetStage }
+              : lead
+          )
+        );
+
+        // Recarregar estatísticas
+        const newStats = await statsService.getDashboardStats();
+        setDashboardStats(newStats);
+
+        // Se o lead movido está selecionado, recarregar suas atividades
+        if (selectedLead && selectedLead.id === draggedLead) {
+          await loadLeadActivities(draggedLead);
+        }
+      } catch (error) {
+        console.error('Erro ao atualizar estágio do lead:', error);
+        alert('Erro ao mover o lead. Tente novamente.');
+      } finally {
+        setDraggedLead(null);
+      }
     }
   };
 
@@ -472,59 +546,37 @@ export default function Dashboard({ onLogout }: DashboardProps) {
   // getCities expects a specific union type for state codes; cast to any to call dynamically
   const availableCities: string[] = newLeadForm.state ? getCities(newLeadForm.state as any) : [];
 
-  const mockResults: Lawyer[] = [
-    {
-      id: '1',
-      name: 'Ana Silva Santos',
-      oab: 'SP 123.456',
-      specialty: 'Direito Civil',
-      city: 'São Paulo',
-      state: 'SP',
-      phone: '(11) 99999-1234',
-      email: 'ana.silva@exemplo.com',
-      address: 'Av. Paulista, 1000 - Bela Vista',
-      firm: 'Silva & Associados',
-      experience: '8 anos',
-      status: 'active'
-    },
-    {
-      id: '2',
-      name: 'Carlos Eduardo Lima',
-      oab: 'RJ 234.567',
-      specialty: 'Direito Empresarial',
-      city: 'Rio de Janeiro',
-      state: 'RJ',
-      phone: '(21) 98888-5678',
-      email: 'carlos.lima@exemplo.com',
-      address: 'Rua da Assembleia, 10 - Centro',
-      firm: 'Lima Advocacia',
-      experience: '12 anos',
-      status: 'active'
-    },
-    {
-      id: '3',
-      name: 'Mariana Oliveira',
-      oab: 'MG 345.678',
-      specialty: 'Direito Trabalhista',
-      city: 'Belo Horizonte',
-      state: 'MG',
-      phone: '(31) 97777-9012',
-      email: 'mariana.oliveira@exemplo.com',
-      address: 'Av. Afonso Pena, 1500 - Funcionários',
-      firm: 'Oliveira & Parceiros',
-      experience: '6 anos',
-      status: 'active'
-    }
-  ];
-
-  const handleSearch = () => {
+  const handleSearch = async () => {
     setIsSearching(true);
     setHasSearched(true);
     
-    setTimeout(() => {
-      setSearchResults(mockResults);
+    try {
+      // Preparar filtros de busca
+      const filters: LawyerSearchFilters = {};
+      
+      if (searchTerm.trim()) {
+        filters.name = searchTerm.trim();
+      }
+      if (selectedSpecialty) {
+        filters.specialty = selectedSpecialty;
+      }
+      if (selectedState) {
+        filters.state = selectedState;
+      }
+      if (selectedCity) {
+        filters.city = selectedCity;
+      }
+
+      // Buscar advogados reais no Firebase
+      const results = await lawyerService.searchLawyers(filters);
+      setSearchResults(results);
+    } catch (error) {
+      console.error('Erro ao buscar advogados:', error);
+      alert('Erro ao buscar advogados. Tente novamente.');
+      setSearchResults([]);
+    } finally {
       setIsSearching(false);
-    }, 1500);
+    }
   };
 
   const handleReset = () => {
@@ -538,7 +590,9 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setRevealedContacts(new Set());
   };
 
-  const toggleContactReveal = (lawyerId: string) => {
+  const toggleContactReveal = async (lawyerId: string) => {
+    const isCurrentlyRevealed = revealedContacts.has(lawyerId);
+    
     setRevealedContacts(prev => {
       const newSet = new Set(prev);
       if (newSet.has(lawyerId)) {
@@ -548,14 +602,67 @@ export default function Dashboard({ onLogout }: DashboardProps) {
       }
       return newSet;
     });
+
+    // NOTA: A atividade de revelação de contato será registrada quando o lead for criado
+    // pois precisamos do leadId para usar subcoleções
   };
 
-  const addLead = (lawyerId: string) => {
-    setAddedLeads(prev => {
-      const newSet = new Set(prev);
-      newSet.add(lawyerId);
-      return newSet;
-    });
+  const addLead = async (lawyerId: string) => {
+    try {
+      // Encontrar o advogado nos resultados da busca
+      const lawyer = searchResults.find(l => l.id === lawyerId);
+      if (!lawyer) {
+        console.error('Advogado não encontrado');
+        return;
+      }
+
+      const newLead = {
+        name: lawyer.name,
+        company: lawyer.firm,
+        specialty: lawyer.specialty,
+        city: lawyer.city,
+        state: lawyer.state,
+        oab: lawyer.oab,
+        phone: lawyer.phone,
+        email: lawyer.email,
+        address: lawyer.address,
+        stage: 'no-contact' as const
+      };
+
+      // Adicionar ao Firebase
+      const leadId = await leadService.addLead(newLead);
+      
+      // Registrar atividade de criação do lead
+      await activityService.logLeadCreated(leadId, lawyer.name);
+      
+      // Registrar atividade de contato revelado se foi revelado
+      if (revealedContacts.has(lawyer.id)) {
+        await activityService.logContactRevealed(leadId, lawyer.name, 'phone');
+        if (lawyer.email) {
+          await activityService.logContactRevealed(leadId, lawyer.name, 'email');
+        }
+      }
+
+      // Atualizar lista local
+      const addedLead = { ...newLead, id: leadId };
+      setLeads(prevLeads => [...prevLeads, addedLead]);
+      
+      // Atualizar estado de leads adicionados
+      setAddedLeads(prev => {
+        const newSet = new Set(prev);
+        newSet.add(lawyerId);
+        return newSet;
+      });
+
+      // Recarregar estatísticas
+      const newStats = await statsService.getDashboardStats();
+      setDashboardStats(newStats);
+
+      console.log('Lead adicionado com sucesso:', leadId);
+    } catch (error) {
+      console.error('Erro ao adicionar lead:', error);
+      alert('Erro ao adicionar lead. Tente novamente.');
+    }
   };
 
   const removeLead = (lawyerId: string) => {
@@ -570,52 +677,80 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setShowAddLeadModal(true);
   };
 
-  const handleSubmitNewLead = () => {
+  const handleSubmitNewLead = async () => {
     // basic email check
     const emailValid = newLeadForm.email && /\S+@\S+\.\S+/.test(newLeadForm.email);
     if (
       newLeadForm.name &&
       newLeadForm.company &&
+      newLeadForm.specialty &&
+      newLeadForm.state &&
+      newLeadForm.city &&
       newLeadForm.oabState &&
       newLeadForm.oabNumber &&
+      newLeadForm.oabNumber.length >= 5 &&
       newLeadForm.phone &&
       emailValid &&
       newLeadForm.street &&
       newLeadForm.number &&
       newLeadForm.neighborhood
     ) {
-      const oabFormatted = `OAB/${newLeadForm.oabState} ${newLeadForm.oabNumber}`;
-      const fullAddress = `${newLeadForm.street}, ${newLeadForm.number} - ${newLeadForm.neighborhood}`;
-      const newLead: Lead = {
-        id: (Date.now()).toString(),
-        name: newLeadForm.name,
-        company: newLeadForm.company,
-        specialty: newLeadForm.specialty || 'Não especificado',
-        city: newLeadForm.city || 'Não informado',
-        state: newLeadForm.state || '--',
-        oab: oabFormatted,
-        phone: newLeadForm.phone,
-        email: newLeadForm.email,
-        address: fullAddress,
-        stage: 'no-contact'
-      };
+      try {
+        const oabFormatted = `OAB/${newLeadForm.oabState} ${newLeadForm.oabNumber}`;
+        const fullAddress = `${newLeadForm.street}, ${newLeadForm.number} - ${newLeadForm.neighborhood}`;
+        
+        const leadData = {
+          name: newLeadForm.name,
+          company: newLeadForm.company,
+          specialty: newLeadForm.specialty || 'Não especificado',
+          city: newLeadForm.city || 'Não informado',
+          state: newLeadForm.state || '--',
+          oab: oabFormatted,
+          phone: newLeadForm.phone,
+          email: newLeadForm.email,
+          address: fullAddress,
+          stage: 'no-contact' as Lead['stage']
+        };
 
-      setLeads(prev => [newLead, ...prev]);
-      setNewLeadForm({
-        name: '',
-        company: '',
-        specialty: '',
-        city: '',
-        state: '',
-        oabState: '',
-        oabNumber: '',
-        phone: '',
-        email: '',
-        street: '',
-        number: '',
-        neighborhood: ''
-      });
-      setShowAddLeadModal(false);
+        // Adiciona no Firebase
+        const newLeadId = await leadService.addLead(leadData);
+        
+        // Registrar atividade de criação do lead
+        await activityService.logLeadCreated(newLeadId, leadData.name);
+        
+        // Adiciona na lista local
+        const newLead: Lead = {
+          id: newLeadId,
+          ...leadData
+        };
+
+        setLeads(prev => [newLead, ...prev]);
+        
+        // Recarregar estatísticas
+        const newStats = await statsService.getDashboardStats();
+        setDashboardStats(newStats);
+        
+        // Limpa o formulário
+        setNewLeadForm({
+          name: '',
+          company: '',
+          specialty: '',
+          city: '',
+          state: '',
+          oabState: '',
+          oabNumber: '',
+          phone: '',
+          email: '',
+          street: '',
+          number: '',
+          neighborhood: ''
+        });
+        setShowAddLeadModal(false);
+        
+      } catch (error) {
+        console.error('Erro ao adicionar lead:', error);
+        alert('Erro ao adicionar lead. Tente novamente.');
+      }
     }
   };
 
@@ -637,12 +772,26 @@ export default function Dashboard({ onLogout }: DashboardProps) {
     setShowAddLeadModal(false);
   };
 
-  const stats = [
-    { label: 'Consultas Realizadas', value: '1.234', icon: Search, color: 'gold' },
-    { label: 'Profissionais Encontrados', value: '5.678', icon: Target, color: 'gold' },
-    { label: 'Taxa de Precisão', value: '97%', icon: TrendingUp, color: 'gold' },
-    { label: 'Registros Ativos', value: '892', icon: Users, color: 'gold' }
-  ];
+  // Calcular estatísticas baseadas nos dados reais
+  const getDisplayStats = () => {
+    if (isLoadingStats || !dashboardStats) {
+      return [
+        { label: 'Total de Leads', value: '...', icon: Search, color: 'gold' },
+        { label: 'Advogados no Banco', value: '...', icon: Target, color: 'gold' },
+        { label: 'Taxa de Conversão', value: '...', icon: TrendingUp, color: 'gold' },
+        { label: 'Contatos Revelados', value: '...', icon: Users, color: 'gold' }
+      ];
+    }
+
+    return [
+      { label: 'Total de Leads', value: dashboardStats.totalLeads.toString(), icon: Search, color: 'gold' },
+      { label: 'Advogados no Banco', value: dashboardStats.totalLawyers.toString(), icon: Target, color: 'gold' },
+      { label: 'Taxa de Conversão', value: `${dashboardStats.conversionRate.toFixed(1)}%`, icon: TrendingUp, color: 'gold' },
+      { label: 'Contatos Revelados', value: dashboardStats.contactsRevealed.toString(), icon: Users, color: 'gold' }
+    ];
+  };
+
+  const stats = getDisplayStats();
 
   return (
     <div className="min-h-screen bg-law-navy-950 text-slate-100 custom-scrollbar">
@@ -670,7 +819,12 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 <HelpCircle className="w-5 h-5 text-law-gold-400 group-hover:text-law-gold-300" />
               </button>
               <div className="text-sm text-slate-300">
-                <span className="font-semibold text-slate-100">João Silva</span>
+                <span className="font-semibold text-slate-100">
+                  {profile?.fullName || user?.email || 'Usuário LeadJur'}
+                </span>
+                {profile?.company && (
+                  <div className="text-xs text-slate-400">{profile.company}</div>
+                )}
               </div>
               <button
                 onClick={onLogout}
@@ -785,6 +939,11 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   </button>
                 </div>
               </div>
+              {isLoadingLeads ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="text-slate-400 text-lg">Carregando leads...</div>
+                </div>
+              ) : (
               <div className="flex gap-4 overflow-x-auto pb-4 custom-scrollbar">
                 {/* Sem Contato */}
                 <div 
@@ -804,7 +963,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-slate-500/20 rounded p-3 law-shadow cursor-move hover:border-slate-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -838,7 +997,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-blue-500/20 rounded p-3 law-shadow cursor-move hover:border-blue-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -872,7 +1031,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-cyan-500/20 rounded p-3 law-shadow cursor-move hover:border-cyan-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -906,7 +1065,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-law-gold-500/20 rounded p-3 law-shadow cursor-move hover:border-law-gold-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -940,7 +1099,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-purple-500/20 rounded p-3 law-shadow cursor-move hover:border-purple-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -974,7 +1133,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-emerald-500/20 rounded p-3 law-shadow cursor-move hover:border-emerald-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -1008,7 +1167,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-indigo-500/20 rounded p-3 law-shadow cursor-move hover:border-indigo-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -1042,7 +1201,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-red-500/20 rounded p-3 law-shadow cursor-move hover:border-red-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -1076,7 +1235,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                         draggable
                         onDragStart={(e) => handleDragStart(e, lead.id)}
                         onDragEnd={handleDragEnd}
-                        onClick={() => setSelectedLead({ name: lead.name, company: lead.company, specialty: lead.specialty, city: lead.city, state: lead.state, oab: lead.oab })}
+                        onClick={() => setSelectedLead(lead)}
                         className={`bg-law-navy-900/50 border border-orange-500/20 rounded p-3 law-shadow cursor-move hover:border-orange-500/40 transition-all ${
                           draggedLead === lead.id ? 'opacity-50 scale-95' : ''
                         }`}
@@ -1094,6 +1253,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   </div>
                 </div>
               </div>
+              )}
             </div>
           </>
         )}
@@ -1380,7 +1540,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                     <label className="block text-sm font-semibold text-slate-200 mb-2">Nome Completo</label>
                     <input
                       type="text"
-                      defaultValue="João Silva"
+                      placeholder="Nome completo do advogado"
                       className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100"
                     />
                   </div>
@@ -1684,6 +1844,18 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                 </div>
 
                 <div className="mb-4">
+                  <label className="block text-sm font-semibold text-slate-200 mb-2">Telefone <span className="text-white">*</span></label>
+                  <input
+                    type="tel"
+                    value={newLeadForm.phone}
+                    onChange={(e) => setNewLeadForm(prev => ({ ...prev, phone: e.target.value }))}
+                    placeholder="(11) 99999-9999"
+                    className="w-full px-4 py-2 bg-law-navy-800/80 border border-law-gold-900/30 rounded focus:outline-none focus:ring-2 focus:ring-law-gold-600 text-slate-100 placeholder-slate-500"
+                    required
+                  />
+                </div>
+
+                <div className="mb-4">
                   <label className="block text-sm font-semibold text-slate-200 mb-2">Email *</label>
                   <input
                     type="email"
@@ -1839,7 +2011,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
             <div className="p-6 space-y-6 overflow-y-auto custom-scrollbar flex-1">
               {/* Nome e Empresa */}
               <div>
-                <h3 className="text-xl font-bold text-law-gold-400 mb-2">{selectedLead.name}</h3>
+                <h3 className="text-xl font-bold text-law-gold-400 -mb-1">{selectedLead.name}</h3>
                 <p className="text-lg text-slate-300">{selectedLead.company}</p>
               </div>
 
@@ -1880,7 +2052,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <Phone className="w-5 h-5 text-law-gold-400 mt-0.5" />
                   <div>
                     <p className="text-xs text-slate-400">Telefone</p>
-                    <p className="text-slate-200 font-medium">(11) 98765-4321</p>
+                    <p className="text-slate-200 font-medium">{selectedLead.phone || 'Não informado'}</p>
                   </div>
                 </div>
 
@@ -1888,7 +2060,7 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <Mail className="w-5 h-5 text-law-gold-400 mt-0.5" />
                   <div>
                     <p className="text-xs text-slate-400">E-mail</p>
-                    <p className="text-slate-200 font-medium">{selectedLead.name.toLowerCase().replace(/ /g, '.')}@{selectedLead.company.toLowerCase().replace(/ /g, '')}.com.br</p>
+                    <p className="text-slate-200 font-medium">{selectedLead.email || 'Não informado'}</p>
                   </div>
                 </div>
 
@@ -1896,8 +2068,8 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <Building className="w-5 h-5 text-law-gold-400 mt-0.5" />
                   <div>
                     <p className="text-xs text-slate-400">Endereço</p>
-                    <p className="text-slate-200 font-medium">Av. Paulista, 1000 - Sala 800</p>
-                    <p className="text-slate-200 font-medium">{selectedLead.city}, {selectedLead.state} - CEP 01310-100</p>
+                    <p className="text-slate-200 font-medium">{selectedLead.address || 'Não informado'}</p>
+                    <p className="text-slate-200 font-medium">{selectedLead.city}, {selectedLead.state}</p>
                   </div>
                 </div>
               </div>
@@ -1908,93 +2080,58 @@ export default function Dashboard({ onLogout }: DashboardProps) {
                   <Calendar className="w-5 h-5 text-law-gold-400" />
                   Histórico de Atividades
                 </h4>
-                <div className="space-y-4 relative before:content-[''] before:absolute before:left-[7px] before:top-2 before:bottom-2 before:w-0.5 before:bg-law-gold-900/30">
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-law-gold-600 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Perfil criado</p>
-                      <p className="text-sm text-slate-300">Cadastro inicial realizado com informações básicas.</p>
-                      <p className="text-xs text-slate-400 mt-1">05 out 2025 às 16:40</p>
-                    </div>
+                
+                {isLoadingActivities ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-slate-400">Carregando atividades...</div>
                   </div>
-
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-slate-400 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Lead adicionado ao sistema</p>
-                      <p className="text-sm text-slate-300">Lead captado através do formulário do site.</p>
-                      <p className="text-xs text-slate-400 mt-1">05 out 2025 às 16:45</p>
-                    </div>
+                ) : leadActivities.length > 0 ? (
+                  <div className="space-y-4 relative">
+                    {/* Linha cronológica vertical */}
+                    <div className="absolute left-[7px] top-2 bottom-2 w-0.5 bg-gradient-to-b from-slate-600 via-law-gold-900/30 to-law-gold-500"></div>
+                    
+                    {leadActivities.map((activity, index) => (
+                      <div key={activity.id || index} className="flex gap-3 relative">
+                        {/* Bolinha da atividade com cor baseada no estágio */}
+                        <div className={`w-4 h-4 ${getActivityColor(activity)} rounded-full mt-1 z-10 flex items-center justify-center shadow-lg border-2 border-law-navy-900`}>
+                          <div className="w-1.5 h-1.5 bg-white rounded-full"></div>
+                        </div>
+                        
+                        {/* Conteúdo da atividade */}
+                        <div className="flex-1 bg-law-navy-800/20 rounded-lg p-3 border border-law-gold-900/10">
+                          <p className="text-slate-200 font-semibold">{activity.title}</p>
+                          <p className="text-sm text-slate-300 mt-1">{activity.description}</p>
+                          <p className="text-xs text-slate-400 mt-2 flex items-center gap-1">
+                            <Calendar className="w-3 h-3" />
+                            {formatActivityDate(activity.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-blue-400 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Movido para "Tentativa de Contato"</p>
-                      <p className="text-sm text-slate-300">E-mail de apresentação enviado e WhatsApp enviado.</p>
-                      <p className="text-xs text-slate-400 mt-1">07 out 2025 às 09:30</p>
-                    </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <div className="text-slate-400 mb-2">Nenhuma atividade registrada</div>
+                    <p className="text-xs text-slate-500">
+                      As atividades aparecerão aqui conforme você interage com o lead
+                    </p>
                   </div>
-
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-cyan-400 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Movido para "Contato Feito"</p>
-                      <p className="text-sm text-slate-300">Primeira conversa realizada. Cliente demonstrou interesse.</p>
-                      <p className="text-xs text-slate-400 mt-1">08 out 2025 às 14:15</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-law-gold-400 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Movido para "Reunião Agendada"</p>
-                      <p className="text-sm text-slate-300">Reunião de apresentação agendada para 11/10/2025 às 10h.</p>
-                      <p className="text-xs text-slate-400 mt-1">09 out 2025 às 11:20</p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-purple-400 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Movido para "Em Negociação"</p>
-                      <p className="text-sm text-slate-300">Proposta comercial enviada e em análise pelo cliente.</p>
-                      <p className="text-xs text-slate-400 mt-1">12 out 2025 às 16:45</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex gap-3 relative">
-                    <div className="w-4 h-4 bg-emerald-500 rounded-full mt-1 z-10 flex items-center justify-center">
-                      <div className="w-2 h-2 bg-white rounded-full"></div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-slate-200 font-semibold">Movido para "Fechado"</p>
-                      <p className="text-sm text-slate-300">Negociação concluída com sucesso. Contrato assinado.</p>
-                      <p className="text-xs text-slate-400 mt-1">14 out 2025 às 14:30</p>
-                    </div>
-                  </div>
-                </div>
+                )}
               </div>
 
               {/* Ações */}
               <div className="flex gap-3">
-                <button className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                <button 
+                  onClick={handleCallLead}
+                  className="flex-1 px-4 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
                   <Phone className="w-5 h-5" />
                   Ligar Agora
                 </button>
-                <button className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2">
+                <button 
+                  onClick={handleEmailLead}
+                  className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold transition-colors flex items-center justify-center gap-2"
+                >
                   <Mail className="w-5 h-5" />
                   Enviar E-mail
                 </button>
