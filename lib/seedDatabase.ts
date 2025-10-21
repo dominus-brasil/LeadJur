@@ -155,6 +155,15 @@ export const seedDatabase = {
       if (existingLawyers.length === 0) {
         console.log('Adicionando advogados de exemplo...');
         await lawyerService.addSampleLawyers();
+        
+        // Adicionar mais advogados usando o novo serviço
+        console.log('Adicionando base de dados expandida...');
+        const states = ['SP', 'RJ', 'MG', 'RS'];
+        for (const state of states) {
+          const { lawyerDataService } = await import('./lawyerDataService');
+          const lawyers = await lawyerDataService.generateMockOABData(state);
+          await lawyerDataService.importLawyersToFirebase(lawyers, user.uid);
+        }
       } else {
         console.log(`${existingLawyers.length} advogados já existem no banco para este usuário.`);
       }
